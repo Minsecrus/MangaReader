@@ -1,16 +1,15 @@
 <!-- app/components/Button.vue -->
 <script setup lang="ts">
-const { variant = 'primary', size = 'md' } = defineProps<{
+interface Prop {
     variant?: 'primary' | 'secondary'
     size?: 'sm' | 'md' | 'lg'
-}>()
+}
+const { variant = 'primary', size = 'md' } = defineProps<Prop>()
 
 const getButtonClass = () => {
-    const baseClass = 'rounded transition-all cursor-pointer'
-
     const variantClass = variant === 'primary'
-        ? 'btn-manga'
-        : 'px-3 py-1.5 rounded'
+        ? 'px-4 py-2 bg-primary rounded-primary'
+        : 'px-3 py-1.5 bg-manga-400 rounded-secondary'
 
     const sizeClass = size === 'sm'
         ? 'text-sm'
@@ -18,26 +17,14 @@ const getButtonClass = () => {
             ? 'text-lg'
             : 'text-base'
 
-    return `${baseClass} ${variantClass} ${sizeClass}`
-}
-
-const getButtonStyle = () => {
-    if (variant === 'secondary') {
-        return {
-            backgroundColor: 'var(--color-manga-400)',
-            color: 'white'
-        }
-    }
-    return {}
+    return `${variantClass} ${sizeClass}`
 }
 </script>
 
 <template>
-    <button :class="getButtonClass()" :style="getButtonStyle()">
+    <button
+        class="rounded transition-all duration-200 text-white cursor-pointer disabled:cursor-not-allowed hover:opacity-90 hover:-translate-y-px hover:shadow-base"
+        :class="getButtonClass()">
         <slot />
     </button>
 </template>
-
-<style scoped>
-/* 组件特定样式 */
-</style>
