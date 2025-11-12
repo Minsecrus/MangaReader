@@ -42,17 +42,6 @@ const handleDragOver = (event: Event) => {
     event.stopPropagation()
 }
 
-const handleFileSelect = (event: Event) => {
-    const input = event.target as HTMLInputElement
-    const files = input.files
-
-    if (files && files.length > 0) {
-        addImages(Array.from(files))
-    }
-
-    input.value = ''
-}
-
 // 添加图片
 const addImages = (files: File[]) => {
     files.forEach(file => {
@@ -171,25 +160,8 @@ const handleScreenshot = () => { console.log('handleScreenshot') }
         <!-- 左侧缩略图列表 -->
         <div v-if="images.length > 0" ref="imagesPreviewContainer"
             class="w-24 flex flex-col gap-2 overflow-y-auto bg-manga-100 dark:bg-manga-800 p-2 rounded-primary border border-manga-200 dark:border-manga-600">
-            <div v-for="(image, index) in images" :key="image.id"
-                class="relative group cursor-pointer transition-all duration-200" @click="selectImage(index)">
-                <!-- 缩略图 - 阻止被拖拽 -->
-                <img :src="image.url" :alt="`图片 ${index + 1}`" draggable="false"
-                    class="w-20 h-20 object-cover rounded border-2 transition-all select-none"
-                    :class="index === currentImageIndex ? 'border-primary' : 'border-manga-300 dark:border-manga-600'" />
-
-                <!-- 删除按钮 -->
-                <button @click.stop="removeImage(index)"
-                    class="absolute -top-1 -right-1 w-5 h-5 bg-red-400 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center text-xs hover:bg-red-500 cursor-pointer">
-                    <IconDelete class="text-white size-1/2" />
-                </button>
-
-                <!-- 图片序号 -->
-                <div
-                    class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-0.5 text-center rounded-b">
-                    {{ index + 1 }}
-                </div>
-            </div>
+            <ImageThumbnail v-for="(image, index) in images" :key="image.id" :image="image" :index="index"
+                :is-active="index === currentImageIndex" @select="selectImage(index)" @delete="removeImage(index)" />
         </div>
 
         <!-- 主预览区域 -->
@@ -230,14 +202,7 @@ const handleScreenshot = () => { console.log('handleScreenshot') }
                     <p class="text-sm mb-6 text-manga-600 dark:text-manga-400">拖拽图片到此处</p>
 
                     <div class="flex gap-3 justify-center">
-                        <label class="inline-block">
-                            <div
-                                class="text-base transition-all duration-200 text-white cursor-pointer hover:opacity-90 hover:-translate-y-px hover:shadow-base px-4 py-2 bg-primary rounded-primary">
-                                选择图片📁
-                            </div>
-                            <input type="file" accept="image/*" multiple @change="handleFileSelect" class="hidden">
-                        </label>
-
+                        <SelectImageButton @files-selected="addImages" />
                         <Button variant="secondary" @click="handleScreenshot">截图✂️</Button>
                     </div>
                 </div>
