@@ -1,6 +1,10 @@
 /* main.css */
 @import "tailwindcss";
 
+* {
+  box-sizing: border-box;
+}
+
 /* Define dark mode variant for Tailwind CSS */
 @custom-variant dark (&:where(.dark, .dark *));
 
