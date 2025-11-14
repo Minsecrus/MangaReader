@@ -1,6 +1,7 @@
 <!-- app/components/CopyButton.vue -->
 <script setup lang="ts">
 const buttonText = ref('复制')
+let timeoutId: NodeJS.Timeout | null = null
 // 接收一个父级传递过来的text来实现点击按钮复制
 interface Prop {
     textToCopy: string
@@ -8,6 +9,9 @@ interface Prop {
 const { textToCopy } = defineProps<Prop>()
 
 const copyText = async () => {
+    if (timeoutId) {
+        clearTimeout(timeoutId)
+    }
     try {
         await window.navigator.clipboard.writeText(textToCopy)
         buttonText.value = '已复制'
@@ -15,7 +19,7 @@ const copyText = async () => {
         buttonText.value = '复制失败'
         console.error('复制失败:', err)
     } finally {
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
             buttonText.value = '复制'
         }, 1500)
     }
