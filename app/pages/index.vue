@@ -2,6 +2,9 @@
 <script setup lang="ts">
 // 原文显示板块 使用 v-model 双向绑定
 const originalText = ref('今日はいい天気ですね。漫画を読みながら日本語を勉強します。')
+const handleOcr = () => {
+    console.log('ocrbtn clicked!')
+}
 </script>
 
 <template>
@@ -17,6 +20,7 @@ const originalText = ref('今日はいい天気ですね。漫画を読みなが
                 </div>
 
                 <div class="lg:col-span-2 space-y-4">
+                    <OcrButton @ocr-btn-click="handleOcr" />
                     <OriginalText v-model:local-text="originalText" />
                     <!-- 这里indexvue起到一个父组件传递originalText的作用 v-model 传递给originalText再传递给Translationvue -->
                     <TokenizedWords :origin-text="originalText" />
