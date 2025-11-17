@@ -1,8 +1,6 @@
 // main.js
 const { app, BrowserWindow, ipcMain, desktopCapturer, screen, globalShortcut } = require('electron')
 const path = require('path')
-// import { app, BrowserWindow, ipcMain, desktopCapturer, screen } from 'electron'
-// import path from 'path'
 
 // 判断是否为开发环境 (由 Electron Forge 自动设置)
 const isDev = !app.isPackaged
