@@ -6,7 +6,7 @@ const localText = defineModel('localText', { type: String })
 <template>
     <div class="card">
         <div class="flex items-center justify-between mb-3">
-            <div class="text-xs font-semibold text-manga-300 dark:text-manga-200">
+            <div class="text-xs font-semibold text-manga-600 dark:text-manga-200">
                 📝 识别原文
             </div>
             <CopyButton :textToCopy="localText ?? ''" />

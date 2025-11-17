@@ -49,7 +49,7 @@ const toggleTranslation = async () => {
 <template>
     <div class="card">
         <div class="flex items-center justify-between mb-3">
-            <div class="text-xs font-semibold text-manga-600 dark:text-manga-400">
+            <div class="text-xs font-semibold text-manga-600 dark:text-manga-200">
                 🌐 翻译
             </div>
             <CopyButton v-if="showTranslation && translatedText" :textToCopy="translatedText" />

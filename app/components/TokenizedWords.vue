@@ -83,7 +83,7 @@ onUnmounted(() => {
 
 <template>
     <div class="card">
-        <div class="text-xs font-semibold mb-3 text-manga-600 dark:text-manga-400">
+        <div class="text-xs font-semibold mb-3 text-manga-600 dark:text-manga-200">
             🔤 分词结果
         </div>
 
