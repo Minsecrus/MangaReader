@@ -2,7 +2,7 @@
   "name": "MangaReader",
   "type": "module",
   "version": "1.0.0",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "private": true,
   "electronMirror": "https://npmmirror.com/mirrors/electron/",
   "scripts": {

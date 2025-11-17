@@ -189,7 +189,52 @@ onUnmounted(() => {
     }
 })
 
-const handleScreenshot = () => { console.log('handleScreenshot') }
+// const handleScreenshot = async () => {
+//     // 检查 electronAPI 是否被 preload 成功注入
+//     if (!window.electronAPI) {
+//         console.error('Electron API (window.electronAPI) 未找到。')
+//         console.log('请确保 preload 脚本已正确配置和加载。')
+//         return
+//     }
+
+//     try {
+//         // 1. 调用主进程的截图功能
+//         const arrayBuffer = await window.electronAPI.startScreenshot()
+
+//         // 2. 将返回的 ArrayBuffer 转换为 File
+//         const blob = new Blob([arrayBuffer], { type: 'image/png' })
+//         const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' })
+
+//         // 3. 添加到图片列表
+//         addImages([file])
+
+//     } catch (err) {
+//         // 用户取消截图或发生其他错误
+//         console.log('截图操作被取消或失败:', err)
+//     }
+// }
+
+const handleScreenshot = () => {
+    window.electronAPI.send('window:capture-open')
+}
+
+// 监听截图完成事件
+onMounted(() => {
+    if (window.electronAPI) {
+        window.electronAPI.on('screenshot:captured', (base64Data: string) => {
+            // 将 base64 转换为 File 对象
+            fetch(base64Data)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' })
+                    addImages([file])
+                })
+                .catch(err => {
+                    console.error('截图数据处理失败:', err)
+                })
+        })
+    }
+})
 </script>
 
 <template>
