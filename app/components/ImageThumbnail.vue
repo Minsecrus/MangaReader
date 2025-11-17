@@ -21,7 +21,7 @@ defineEmits<{
 </script>
 
 <template>
-    <div class="relative group cursor-pointer transition-all duration-200" @click="$emit('select')">
+    <div class="relative flex justify-center group cursor-pointer transition-all duration-200" @click="$emit('select')">
         <!-- 缩略图 -->
         <img :src="image.url" :alt="`图片 ${index + 1}`" draggable="false"
             class="w-20 h-20 object-cover rounded border-2 transition-all select-none"
