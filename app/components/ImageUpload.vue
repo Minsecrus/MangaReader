@@ -181,14 +181,6 @@ watch(() => images.value.length, (newLength) => {
     })
 })
 
-// 组件卸载时清理 URL
-onUnmounted(() => {
-    images.value.forEach(img => URL.revokeObjectURL(img.url))
-    if (sortableInstance) {
-        sortableInstance.destroy()
-    }
-})
-
 const handleScreenshot = () => {
     window.electronAPI.send('window:capture-open')
 }
@@ -208,6 +200,14 @@ onMounted(() => {
                     console.error('截图数据处理失败:', err)
                 })
         })
+    }
+})
+
+// 组件卸载时清理 URL
+onUnmounted(() => {
+    images.value.forEach(img => URL.revokeObjectURL(img.url))
+    if (sortableInstance) {
+        sortableInstance.destroy()
     }
 })
 </script>
@@ -242,10 +242,11 @@ onMounted(() => {
             ]">
 
             <!-- 有图片时显示 -->
-            <div v-if="images.length > 0" ref="imageContainer" class="h-full w-full flex items-center justify-center">
+            <div v-if="images.length > 0" ref="imageContainer"
+                class="lg:h-full w-full h-screen flex items-center justify-center">
                 <!-- 阻止图片被拖拽 -->
                 <img :src="images[currentImageIndex]?.url" :alt="`当前图片 ${currentImageIndex + 1}`" draggable="false"
-                    class="object-contain size-auto pointer-events-none select-none" :style="{
+                    class="object-contain size-full pointer-events-none select-none" :style="{
                         maxWidth: containerSize.width + 'px',
                         maxHeight: containerSize.height + 'px'
                     }" />
