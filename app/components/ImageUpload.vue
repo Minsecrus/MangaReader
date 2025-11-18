@@ -215,7 +215,7 @@ onUnmounted(() => {
 <template>
     <div class="h-full flex gap-3 items-stretch">
         <!-- 左侧缩略图列表 -->
-        <div v-if="images.length > 0" ref="imagesPreviewContainer" class="flex flex-col gap-2"
+        <div v-if="images.length > 0" class="flex flex-col gap-2"
             :style="{ height: containerSize.height + 'px' }">
             <!-- 这里可能要改一下 滚动条样式 这里待调整 目前没有更好的方法 -->
             <div class="flex gap-2 w-full justify-between">
@@ -224,7 +224,7 @@ onUnmounted(() => {
                 </SelectImageButton>
                 <Button variant="secondary" class="p-2" @click="handleScreenshot">✂️</Button>
             </div>
-            <div
+            <div ref="imagesPreviewContainer"
                 class="gap-2 min-h-0 bg-manga-100 dark:bg-manga-800 p-2 rounded-primary border border-manga-200 dark:border-manga-600 overflow-y-auto">
                 <ImageThumbnail v-for="(image, index) in images" :key="image.id" :image="image" :index="index"
                     :is-active="index === currentImageIndex" @select="selectImage(index)"
