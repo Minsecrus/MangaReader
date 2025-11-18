@@ -1,6 +1,7 @@
 // main.js
 const { app, BrowserWindow, ipcMain, desktopCapturer, screen, globalShortcut } = require('electron')
 const path = require('path')
+const { OcrService } = require('./ocr-service.cjs')
 
 // 判断是否为开发环境 (由 Electron Forge 自动设置)
 const isDev = !app.isPackaged
@@ -8,6 +9,7 @@ const isDev = !app.isPackaged
 let mainWindow // 将 mainWindow 提升到全局，以便我们可以从 ipcMain 访问它
 
 let captureWindow = null
+let ocrService = null // OCR 服务实例
 
 function createMainWindow() {
     // 创建浏览器窗口
@@ -111,9 +113,48 @@ ipcMain.on('window:capture-close', () => {
     mainWindow.show()
 })
 
-app.whenReady().then(createMainWindow)
+// OCR 识别请求
+ipcMain.handle('ocr:recognize', async (event, imageBase64) => {
+    try {
+        console.log('Received OCR request, image size:', imageBase64.length)
+
+        if (!ocrService || !ocrService.isReady) {
+            return {
+                success: false,
+                error: 'OCR service not ready. Please wait...'
+            }
+        }
+
+        const text = await ocrService.recognize(imageBase64)
+
+        return {
+            success: true,
+            text: text
+        }
+    } catch (error) {
+        console.error('OCR recognition error:', error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+})
+
+app.whenReady().then(async () => {
+    // 启动 OCR 服务
+    ocrService = new OcrService()
+    ocrService.start()
+
+    // 创建主窗口
+    createMainWindow()
+})
 
 app.on('window-all-closed', () => {
+    // 停止 OCR 服务
+    if (ocrService) {
+        ocrService.stop()
+    }
+
     if (process.platform !== 'darwin') {
         app.quit()
     }

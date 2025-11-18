@@ -13,18 +13,85 @@ const handleOcr = () => {
 
 // ocr识别完成 处理ocrCaptureImage
 const handleOcrCapture = async (selectionData: { left: number, top: number, width: number, height: number }) => {
-    isOcrRecognizing.value = true // 图片传递给模型 模型加载
+    isOcrMode.value = false
+    isOcrRecognizing.value = true
 
-    console.log('OCR 框选区域:', selectionData)
+    try {
+        console.log('OCR 框选区域:', selectionData)
 
-    // TODO: 将选区数据和当前图片发送给主进程进行 OCR 识别
-    // window.electronAPI.send('ocr:recognize', { selectionData, imageUrl })
+        // 创建 canvas 截取选中区域
+        const canvas = document.createElement('canvas')
+        const { left, top, width, height } = selectionData
 
-    // 模拟识别
-    setTimeout(() => {
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')!
+
+        // 截取整个页面到 canvas
+        // 查找 ImageUpload 组件内的图片元素
+        const imgElement = document.querySelector('img[alt^="当前图片"]') as HTMLImageElement
+
+        if (!imgElement) {
+            throw new Error('未找到图片元素,请先上传图片')
+        }
+
+        if (!imgElement.complete || !imgElement.naturalWidth) {
+            throw new Error('图片未加载完成')
+        }
+
+        // 获取图片元素的位置
+        const imgRect = imgElement.getBoundingClientRect()
+
+        // 计算相对于图片的坐标
+        const relativeLeft = left - imgRect.left
+        const relativeTop = top - imgRect.top
+
+        // 创建临时 canvas 绘制原图
+        const tempCanvas = document.createElement('canvas')
+        tempCanvas.width = imgElement.naturalWidth
+        tempCanvas.height = imgElement.naturalHeight
+        const tempCtx = tempCanvas.getContext('2d')!
+        tempCtx.drawImage(imgElement, 0, 0)
+
+        // 计算缩放比例
+        const scaleX = imgElement.naturalWidth / imgRect.width
+        const scaleY = imgElement.naturalHeight / imgRect.height
+
+        // 截取选中区域
+        const imageData = tempCtx.getImageData(
+            relativeLeft * scaleX,
+            relativeTop * scaleY,
+            width * scaleX,
+            height * scaleY
+        )
+
+        // 绘制到目标 canvas
+        canvas.width = width * scaleX
+        canvas.height = height * scaleY
+        ctx!.putImageData(imageData, 0, 0)
+
+        // 转换为 base64
+        const imageBase64 = canvas.toDataURL('image/png')
+
+        console.log('发送 OCR 识别请求...')
+
+        // 调用 OCR 识别
+        const result = await window.electronAPI.recognizeText(imageBase64)
+
+        if (result.success && result.text) {
+            originalText.value = result.text
+            console.log('✅ OCR 识别成功:', result.text)
+        } else {
+            console.error('❌ OCR 识别失败:', result.error)
+            alert(`OCR 识别失败: ${result.error}`)
+        }
+
+    } catch (error) {
+        console.error('OCR 处理错误:', error)
+        alert(`OCR 处理错误: ${error}`)
+    } finally {
         isOcrRecognizing.value = false
-        originalText.value = '识别的文本会显示在这里'
-    }, 2000)
+    }
 }
 
 const handleOcrCancel = () => {

@@ -1,0 +1,10 @@
+# OCR Service Dependencies
+
+# Image processing
+pillow>=10.0.0
+
+# Manga OCR
+# 使用本地 whl 文件安装:
+# pip install "C:\Users\32103\Downloads\manga_ocr-0.1.14-py3-none-any.whl"
+# 或从 PyPI 安装:
+# manga-ocr==0.1.14

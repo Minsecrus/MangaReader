@@ -10,5 +10,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     on: (channel, func) => {
         ipcRenderer.on(channel, (event, ...args) => func(...args))
+    },
+
+    // OCR 识别
+    recognizeText: (imageBase64) => {
+        return ipcRenderer.invoke('ocr:recognize', imageBase64)
     }
 })
