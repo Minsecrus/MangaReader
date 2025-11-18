@@ -102,16 +102,8 @@ ipcMain.on('window:capture-complete', (event, screenshotData) => {
     }
 })
 
-// 接收取消截图事件
-ipcMain.on('window:capture-close', () => {
-    // 关闭截图窗口
-    if (captureWindow && !captureWindow.isDestroyed()) {
-        captureWindow.close()
-    }
-})
 
 ipcMain.on('window:capture-close', () => {
-    console.log(222222222)
     if (captureWindow) {
         captureWindow.close()
         captureWindow = null
