@@ -1,5 +1,10 @@
 <!-- app/components/OriginalText.vue -->
 <script setup lang="ts">
+interface Props {
+    isRecognizing: boolean
+}
+const { isRecognizing } = defineProps<Props>()
+
 const localText = defineModel('localText', { type: String })
 </script>
 
@@ -7,7 +12,7 @@ const localText = defineModel('localText', { type: String })
     <div class="card">
         <div class="flex items-center justify-between mb-3">
             <div class="text-xs font-semibold text-manga-600 dark:text-manga-200">
-                📝 识别原文
+                {{ isRecognizing ? '😎 正在识别' : '📝 识别原文' }}
             </div>
             <CopyButton :textToCopy="localText ?? ''" />
             <!-- 将localtext传递给CopyButton来实现点击button复制 值可能为空 故条件运算符 ?? '' 如为空传递'' -->
