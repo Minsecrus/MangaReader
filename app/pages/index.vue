@@ -2,7 +2,7 @@
 <script setup lang="ts">
 // 原文显示板块 使用 v-model 双向绑定
 const originalText = ref('今日はいい天気ですね。漫画を読みながら日本語を勉強します。')
-
+const showSettingsModal = ref(false) // settingModal显示
 const isOcrMode = ref(false) // ocr模式 鼠标十字crosshair
 const isOcrRecognizing = ref(false) // 正在调用模型识别
 
@@ -103,7 +103,7 @@ const handleOcrCancel = () => {
 <template>
     <div class="min-h-screen bg-manga-50 dark:bg-manga-700">
         <header class="px-6 py-4 border-b border-manga-200 dark:border-manga-600 bg-manga-100 dark:bg-manga-800">
-            <Nav />
+            <Nav @open-settings="showSettingsModal = true" />
         </header>
 
         <main class="max-w-screen-2xl mx-auto p-6">
@@ -124,5 +124,7 @@ const handleOcrCancel = () => {
                 </div>
             </div>
         </main>
+
+        <SettingsModal :show="showSettingsModal" @close="showSettingsModal = false" />
     </div>
 </template>

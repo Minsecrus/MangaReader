@@ -6,6 +6,11 @@ const toggleDark = () => {
     isDark.value = !isDark.value
     document.documentElement.classList.toggle('dark')
 }
+
+const emit = defineEmits<{
+    openSettings: []
+}>()
+
 onMounted(() => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     if (prefersDark) {
@@ -15,7 +20,9 @@ onMounted(() => {
     }
 })
 
-const handleSettings = () => console.log('打开设置')
+const handleSettings = () => {
+    emit('openSettings')
+}
 </script>
 
 <template>
