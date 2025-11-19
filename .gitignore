@@ -24,3 +24,4 @@ logs
 !.env.example
 
 ocr-service/venv
+ocr-service/ocr-model
