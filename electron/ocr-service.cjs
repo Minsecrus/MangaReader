@@ -12,193 +12,129 @@ class OcrService {
     }
 
     start() {
-        // 开发环境: 使用 venv 中的 Python
-        // 生产环境: 使用打包的 Python 可执行文件
         const isDev = !require('electron').app.isPackaged
-
-        let pythonPath
-        let scriptPath
+        let pythonPath, scriptPath
 
         if (isDev) {
-            // 开发环境: 使用 venv 中的 Python
-            const venvPython = path.join(__dirname, '../ocr-service/venv/Scripts/python.exe')
-            pythonPath = venvPython
+            // 注意：这里路径根据你的项目结构微调，确保能找到 python.exe
+            pythonPath = path.join(__dirname, '../ocr-service/venv/Scripts/python.exe')
             scriptPath = path.join(__dirname, '../ocr-service/ocr_service.py')
         } else {
-            // 生产环境: 使用打包的可执行文件
             pythonPath = path.join(process.resourcesPath, 'ocr-service/ocr-service.exe')
-            scriptPath = null // exe 不需要脚本路径
+            scriptPath = null
         }
 
         console.log('🚀 Starting OCR service...')
-        console.log('Environment:', isDev ? 'Development' : 'Production')
-        console.log('Python:', pythonPath)
-        console.log('Script:', scriptPath)
 
         const args = scriptPath ? ['-u', scriptPath] : []
 
         this.process = spawn(pythonPath, args, {
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' }
+            env: {
+                ...process.env,
+                PYTHONUNBUFFERED: '1',
+                PYTHONIOENCODING: 'utf-8',
+                // 可以在这里设置 HF 镜像，如果用户在国内
+                HF_ENDPOINT: 'https://hf-mirror.com'
+            }
         })
 
-        // 设置流编码为 UTF-8
         this.process.stdin.setDefaultEncoding('utf-8')
         this.process.stdout.setEncoding('utf-8')
         this.process.stderr.setEncoding('utf-8')
 
-        // 监听 stderr (日志输出)
+        // 监听日志 (stderr)
         this.process.stderr.on('data', (data) => {
-            console.log('[OCR Service]', data.toString().trim())
+            const msg = data.toString().trim()
+            console.log('[OCR Core]', msg)
+            // 如果你想在前端显示下载进度，可以通过 ipcMain 发送这个 msg 到前端
         })
 
-        // 监听 stdout (JSON 响应)
+        // 监听数据 (stdout)
         this.process.stdout.on('data', (data) => {
             this.responseBuffer += data
-
-            // 按行处理响应
             const lines = this.responseBuffer.split('\n')
-            this.responseBuffer = lines.pop() || '' // 保留不完整的行
+            this.responseBuffer = lines.pop() || ''
 
             lines.forEach(line => {
                 line = line.trim()
                 if (!line) return
-
                 try {
                     const response = JSON.parse(line)
                     this._handleResponse(response)
                 } catch (e) {
-                    console.error('Failed to parse OCR response:', line, e)
+                    // 忽略非 JSON 输出（虽然 stderr 应该捕获大部分日志，但以防万一）
                 }
             })
         })
 
-        // 进程错误处理
-        this.process.on('error', (error) => {
-            console.error('❌ OCR service error:', error)
-            this.isReady = false
-        })
-
+        this.process.on('error', (err) => console.error('OCR Process Error:', err))
         this.process.on('exit', (code) => {
-            console.log(`OCR service exited with code ${code}`)
+            console.log(`OCR Process exited: ${code}`)
             this.isReady = false
-
-            // 拒绝所有待处理的请求
-            this.pendingRequests.forEach(({ reject }) => {
-                reject(new Error('OCR service stopped'))
-            })
+            this.pendingRequests.forEach(r => r.reject(new Error('OCR Service Exited')))
             this.pendingRequests.clear()
         })
     }
 
     _handleResponse(response) {
-        // 处理启动信号
         if (response.status === 'ready') {
             this.isReady = true
-            console.log('✅ OCR Service Ready!')
+            console.log('✅ OCR Service is Ready to accept requests!')
             return
         }
 
+        // 简单的错误处理
         if (response.status === 'error') {
-            console.error('❌ OCR Service Failed:', response.message)
+            console.error('❌ OCR Init Error:', response.message)
             return
         }
 
-        // 处理普通响应
-        const { id, success, text, error, message } = response
-
-        // ping 命令的响应
-        if (message === 'pong') {
-            console.log('✅ OCR service is alive')
-            return
-        }
-
-        // 查找对应的请求
+        const { id, success, text, error } = response
         if (id !== undefined && this.pendingRequests.has(id)) {
             const { resolve, reject } = this.pendingRequests.get(id)
             this.pendingRequests.delete(id)
-
-            if (success) {
-                resolve(text)
-            } else {
-                reject(new Error(error || 'OCR recognition failed'))
-            }
+            if (success) resolve(text)
+            else reject(new Error(error))
         }
     }
 
     async recognize(imageBase64) {
         return new Promise((resolve, reject) => {
             if (!this.isReady) {
-                reject(new Error('OCR service not ready'))
+                // 如果服务还没准备好（比如正在下载模型），直接拒绝或者等待
+                // 这里为了简单，直接返回错误提示
+                reject(new Error('OCR Service is initializing (downloading model?)... please wait.'))
                 return
             }
 
-            // 生成请求 ID
             const id = this.requestId++
-
-            // 保存回调
             this.pendingRequests.set(id, { resolve, reject })
 
-            // 构造请求
-            const request = {
-                id,
-                command: 'recognize',
-                image: imageBase64
-            }
+            const request = { id, command: 'recognize', image: imageBase64 }
 
-            // 发送请求
             try {
                 this.process.stdin.write(JSON.stringify(request) + '\n')
-            } catch (error) {
+            } catch (e) {
                 this.pendingRequests.delete(id)
-                reject(error)
+                reject(e)
                 return
             }
 
-            // 超时处理 (60秒，因为首次识别可能需要加载模型)
+            // --- 修改点：超时设置 ---
+            // 因为 OCR 有时候在 CPU 上跑比较慢，或者第一次预热慢
+            // 建议设置长一点，比如 2 分钟
             setTimeout(() => {
                 if (this.pendingRequests.has(id)) {
                     this.pendingRequests.delete(id)
-                    reject(new Error('OCR request timeout'))
+                    reject(new Error('OCR request timeout (120s)'))
                 }
-            }, 60000)
-        })
-    }
-
-    async ping() {
-        return new Promise((resolve, reject) => {
-            if (!this.isReady) {
-                reject(new Error('OCR service not ready'))
-                return
-            }
-
-            const request = { command: 'ping' }
-
-            try {
-                this.process.stdin.write(JSON.stringify(request) + '\n')
-                resolve(true)
-            } catch (error) {
-                reject(error)
-            }
+            }, 120000)
         })
     }
 
     stop() {
-        if (this.process) {
-            try {
-                const request = { command: 'exit' }
-                this.process.stdin.write(JSON.stringify(request) + '\n')
-            } catch (e) {
-                // 忽略错误
-            }
-
-            setTimeout(() => {
-                if (this.process) {
-                    this.process.kill()
-                    this.process = null
-                }
-            }, 1000)
-        }
+        if (this.process) this.process.kill()
     }
 }
 
