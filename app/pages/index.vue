@@ -89,12 +89,12 @@ const handleOcrCapture = async (selectionData: { left: number, top: number, widt
             console.log('✅ OCR 识别成功:', result.text)
         } else {
             console.error('❌ OCR 识别失败:', result.error)
-            alert(`OCR 识别失败: ${result.error}`)
+            showToast(`OCR 识别失败: ${result.error}`)
         }
 
     } catch (error) {
         console.error('OCR 处理错误:', error)
-        alert(`OCR 处理错误: ${error}`)
+        showToast(`OCR 处理错误: ${error}`, 5000)
     } finally {
         isOcrRecognizing.value = false
     }
