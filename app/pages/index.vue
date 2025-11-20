@@ -11,6 +11,8 @@ const handleOcr = () => {
     isOcrMode.value = true
 }
 
+const { initSettings } = useSettings()
+
 // ocr识别完成 处理ocrCaptureImage
 const handleOcrCapture = async (selectionData: { left: number, top: number, width: number, height: number }) => {
     isOcrMode.value = false
@@ -98,6 +100,10 @@ const handleOcrCancel = () => {
     // 用户主动按下esc推出ocr模式
     isOcrMode.value = false
 }
+
+onMounted(() => {
+    initSettings()
+})
 </script>
 
 <template>

@@ -8,10 +8,12 @@ const emit = defineEmits<{
     close: []
 }>()
 
+const { settings, saveSettings, openModelFolder } = useSettings()
+
 const themeOptions: ThemeOption[] = ['light', 'dark', 'system']
 
 const handleClose = () => {
-    console.log(111)
+    saveSettings()
     emit('close')
 }
 </script>
@@ -57,22 +59,25 @@ const handleClose = () => {
                                 <span class="text-manga-900 dark:text-manga-200">
                                     启用分词 (Tokenization)
                                 </span>
-                                <input type="checkbox" class="cursor-pointer">
+                                <input type="checkbox" class="cursor-pointer" v-model="settings.enableTokenization">
                             </label>
 
                             <label class="flex items-center justify-between cursor-pointer">
                                 <span class="text-manga-900 dark:text-manga-200">
                                     启用翻译
                                 </span>
-                                <input type="checkbox" class="cursor-pointer">
+                                <input type="checkbox" class="cursor-pointer" v-model="settings.enableTranslation">
                             </label>
                         </div>
 
                         <div class="space-y-3">
                             <h3 class="text-sm font-medium text-manga-500 uppercase">🎨 外观</h3>
                             <div class="flex gap-4 bg-manga-50 dark:bg-manga-900 p-2 rounded-lg">
-                                <button v-for="mode in themeOptions" :key="mode"
-                                    class="bg-white dark:bg-manga-700 shadow text-blue-600 dark:text-blue-400 font-bold flex-1 py-2 rounded-md text-sm cursor-pointer">
+                                <button v-for="mode in themeOptions" :key="mode" @click="settings.theme = mode"
+                                    class="cursor-pointer flex-1 py-2 rounded-md text-sm transition-all" :class="[
+                                        settings.theme === mode
+                                            ? 'bg-white dark:bg-manga-700 shadow text-blue-600 dark:text-blue-400 font-bold'
+                                            : 'text-manga-500 hover:text-manga-700 dark:hover:text-manga-300']">
                                     {{ mode === 'light' ? '☀️ 浅色' : mode === 'dark' ? '🌙 深色' : '💻 跟随系统' }}
                                 </button>
                             </div>
@@ -86,7 +91,7 @@ const handleClose = () => {
                                 <div class="text-sm text-manga-600 dark:text-manga-300">
                                     需要离线使用？请放置模型文件
                                 </div>
-                                <Button size="sm" variant="secondary">
+                                <Button size="sm" variant="secondary" @btn-click="openModelFolder">
                                     📂 打开文件夹
                                 </Button>
                             </div>
@@ -95,7 +100,7 @@ const handleClose = () => {
 
                     <!-- 底部按钮 -->
                     <div class="mt-8 flex justify-end">
-                        <Button @click="handleClose">完成</Button>
+                        <Button @btn-click="handleClose">完成</Button>
                     </div>
                 </div>
             </Transition>
