@@ -222,7 +222,7 @@ onUnmounted(() => {
                 <SelectImageButton @files-selected="addImages">
                     📁
                 </SelectImageButton>
-                <Button variant="secondary" class="p-2" @click="handleScreenshot">✂️</Button>
+                <Button variant="secondary" class="p-2" @btn-click="handleScreenshot">✂️</Button>
             </div>
             <div ref="imagesPreviewContainer"
                 class="gap-2 min-h-0 bg-manga-100 dark:bg-manga-800 p-2 rounded-primary border border-manga-200 dark:border-manga-600 overflow-y-auto">
@@ -274,7 +274,7 @@ onUnmounted(() => {
                         <SelectImageButton @files-selected="addImages">
                             选择图片📁
                         </SelectImageButton>
-                        <Button variant="secondary" @click="handleScreenshot">截图✂️</Button>
+                        <Button variant="secondary" @btn-click="handleScreenshot">截图✂️</Button>
                     </div>
                 </div>
             </div>

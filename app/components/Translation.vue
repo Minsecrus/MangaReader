@@ -76,11 +76,11 @@ const toggleTranslation = async () => {
 
         <!-- 操作按钮 -->
         <div class="mt-3 flex gap-2">
-            <Button size="sm" @click="toggleTranslation" :disabled="isTranslationLoading">
+            <Button size="sm" :disabled="isTranslationLoading" @btn-click="toggleTranslation">
                 {{ showTranslation ? "隐藏" : "显示" }}翻译
             </Button>
 
-            <Button v-if="hasFirstTranslated" variant="secondary" size="sm" @click="handleRetranslate">
+            <Button v-if="hasFirstTranslated" variant="secondary" size="sm" @btn-click="handleRetranslate">
                 <!-- 如果 hasFirstTranslated 为 true已经进行了第一次翻译 就显示重新翻译按钮 点击就重新调用一次API -->
                 重新翻译
             </Button>

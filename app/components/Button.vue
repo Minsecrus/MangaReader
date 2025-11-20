@@ -19,10 +19,14 @@ const getButtonClass = () => {
 
     return `${variantClass} ${sizeClass}`
 }
+
+const emit = defineEmits<{
+    btnClick: []
+}>()
 </script>
 
 <template>
-    <button
+    <button @click="emit('btnClick')"
         class="rounded transition-all duration-200 text-white cursor-pointer disabled:cursor-not-allowed hover:opacity-90 hover:-translate-y-px hover:shadow-base"
         :class="getButtonClass()">
         <slot />
