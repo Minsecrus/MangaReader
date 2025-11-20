@@ -5,8 +5,12 @@ const originalText = ref('今日はいい天気ですね。漫画を読みなが
 const showSettingsModal = ref(false) // settingModal显示
 const isOcrMode = ref(false) // ocr模式 鼠标十字crosshair
 const isOcrRecognizing = ref(false) // 正在调用模型识别
+const { showToast } = useToast()
 
 const handleOcr = () => {
+    // 启动ocr时显示一个tooltip提示
+    showToast('🖱️ 拖动鼠标框选识别区域 · 按 ESC 取消', 1500)
+
     // 激活 OCR 模式，显示框选 overlay
     isOcrMode.value = true
 }
@@ -108,6 +112,9 @@ onMounted(() => {
 
 <template>
     <div class="min-h-screen bg-manga-50 dark:bg-manga-700">
+        <!-- 全局 Toast 容器 -->
+        <ToastContainer />
+
         <header class="px-6 py-4 border-b border-manga-200 dark:border-manga-600 bg-manga-100 dark:bg-manga-800">
             <Nav @open-settings="showSettingsModal = true" />
         </header>

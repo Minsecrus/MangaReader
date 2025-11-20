@@ -1,43 +1,17 @@
 <!-- ToolTip.vue -->
 <script setup lang="ts">
 interface Props {
-    showTime: number
+    text: string
+    duration: number
 }
-const { showTime = 1500 } = defineProps<Props>()
-
-const show = ref(false)
-
-onMounted(() => {
-    show.value = true
-    setTimeout(() => {
-        show.value = false
-    }, showTime)
-})
+defineProps<Props>()
 </script>
 
 <template>
-    <Transition name="text-fade">
-        <div v-if="show"
-            class="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm shadow-lg pointer-events-none">
-            <slot>ToolTip</slot>
-        </div>
-    </Transition>
+    <!-- 不再需要内部 Transition，由 TransitionGroup 统一管理 -->
+    <div class="bg-black/80 text-white px-5 py-3 rounded-lg text-sm 
+        backdrop-blur-sm shadow-lg pointer-events-none select-none
+        w-max max-w-sm text-center">
+        {{ text }}
+    </div>
 </template>
-
-<style scoped>
-.text-fade-enter-active,
-.text-fade-leave-active {
-    transition: all 300ms ease-in-out;
-}
-
-.text-fade-enter-from,
-.text-fade-leave-to {
-    transform: translateY(-6px);
-    opacity: 0;
-}
-
-.text-fade-enter-to,
-.text-fade-leave-from {
-    opacity: 1;
-}
-</style>

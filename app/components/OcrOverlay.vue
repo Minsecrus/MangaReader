@@ -100,10 +100,5 @@ onMounted(() => {
         <div v-if="isSelecting || (selection.endX !== selection.startX && selection.endY !== selection.startY)"
             class="absolute border-2 border-primary bg-primary/10 pointer-events-none" :style="selectionStyle">
         </div>
-
-        <!-- 提示文字 -->
-        <ToolTip :show-time="1500">
-            🖱️ 拖动鼠标框选识别区域 · 按 ESC 取消
-        </ToolTip>
     </div>
 </template>

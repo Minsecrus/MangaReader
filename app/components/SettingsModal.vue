@@ -9,12 +9,18 @@ const emit = defineEmits<{
 }>()
 
 const { settings, saveSettings, openModelFolder } = useSettings()
+const { showToast } = useToast()
 
 const themeOptions: ThemeOption[] = ['light', 'dark', 'system']
 
 const handleClose = () => {
+    emit('close')
+}
+
+const handleSave = () => {
     saveSettings()
     emit('close')
+    showToast('设置已保存 👌', 1500)
 }
 </script>
 
@@ -100,7 +106,7 @@ const handleClose = () => {
 
                     <!-- 底部按钮 -->
                     <div class="mt-8 flex justify-end">
-                        <Button @btn-click="handleClose">完成</Button>
+                        <Button @btn-click="handleSave">完成</Button>
                     </div>
                 </div>
             </Transition>
