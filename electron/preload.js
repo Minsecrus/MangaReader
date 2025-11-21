@@ -22,8 +22,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     maximizeWindow: () => ipcRenderer.send('window:maximize'),
     closeWindow: () => ipcRenderer.send('window:close'),
 
-     // ✅ 新增：监听窗口状态变化
+    // ✅ 新增：监听窗口状态变化
     onWindowStateChange: (callback) => {
         ipcRenderer.on('window:state-change', (event, state) => callback(state))
-    }
+    },
+
+    // ✅ 新增：Settings API
+    getSettings: () => ipcRenderer.invoke('settings:get'),
+    saveSetting: (key, value) => ipcRenderer.send('settings:set', key, value),
+    openConfigFile: () => ipcRenderer.send('settings:open-config')
 })

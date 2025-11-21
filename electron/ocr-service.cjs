@@ -3,7 +3,8 @@ const { spawn } = require('child_process')
 const path = require('path')
 
 class OcrService {
-    constructor() {
+    constructor(modelPath) {
+        this.modelPath = modelPath
         this.process = null
         this.isReady = false
         this.pendingRequests = new Map()
@@ -17,16 +18,25 @@ class OcrService {
 
         if (isDev) {
             // 注意：这里路径根据你的项目结构微调，确保能找到 python.exe
-            pythonPath = path.join(__dirname, '../ocr-service/venv/Scripts/python.exe')
-            scriptPath = path.join(__dirname, '../ocr-service/ocr_service.py')
+            pythonPath = path.join(__dirname, '../services/venv/Scripts/python.exe') 
+            scriptPath = path.join(__dirname, '../services/ocr_service.py')
         } else {
-            pythonPath = path.join(process.resourcesPath, 'ocr-service/ocr-service.exe')
+            pythonPath = path.join(process.resourcesPath, 'services/ocr-service.exe')
             scriptPath = null
         }
 
-        console.log('🚀 Starting OCR service...')
+        const args = []
+        if (scriptPath) {
+            args.push('-u', scriptPath)
+        }
 
-        const args = scriptPath ? ['-u', scriptPath] : []
+        // 传入模型路径参数
+        if (this.modelPath) {
+            args.push('--model-dir', this.modelPath)
+        }
+
+        console.log('🚀 Starting OCR service...')
+        console.log('📂 Model Path:', this.modelPath)
 
         this.process = spawn(pythonPath, args, {
             stdio: ['pipe', 'pipe', 'pipe'],

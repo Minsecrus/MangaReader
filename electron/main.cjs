@@ -1,6 +1,7 @@
-// main.js
-const { app, BrowserWindow, ipcMain, desktopCapturer, screen, globalShortcut } = require('electron')
+// main.cjs
+const { app, BrowserWindow, ipcMain, desktopCapturer, screen, globalShortcut, shell } = require('electron')
 const path = require('path')
+const fs = require('fs')
 const { OcrService } = require('./ocr-service.cjs')
 
 // 判断是否为开发环境 (由 Electron Forge 自动设置)
@@ -10,6 +11,34 @@ let mainWindow // 将 mainWindow 提升到全局，以便我们可以从 ipcMain
 
 let captureWindow = null
 let ocrService = null // OCR 服务实例
+
+// 全局 store 变量
+let store
+
+function getModelsPath() {
+    // 开发环境：项目根目录/models
+    // 生产环境：安装目录/resources/models
+    return isDev
+        ? path.join(__dirname, '../models')
+        : path.join(process.resourcesPath, 'models')
+}
+
+// ✅ 初始化 Electron Store (处理 ESM 导入)
+async function initStore() {
+    const { default: Store } = await import('electron-store')
+
+    store = new Store({
+        name: 'config', // 文件名为 config.json
+        defaults: {     // 默认配置，防止首次运行为空
+            enableTranslation: false,
+            enableTokenization: true,
+            translationApiKey: '',
+            theme: 'system',
+            ocrShortcut: ''
+        }
+    })
+    return store
+}
 
 function createMainWindow() {
     // 创建浏览器窗口
@@ -99,6 +128,8 @@ async function createCaptureWindow() {
 
 }
 
+// --- IPC Handlers ---
+
 ipcMain.on('window:capture-open', () => {
     // 截图的时间隐藏主窗口 同时 截图完毕或者退出的时间再重新显示
     mainWindow.hide()
@@ -128,6 +159,16 @@ ipcMain.on('window:capture-close', () => {
         captureWindow = null
     }
     mainWindow.show()
+})
+
+// ✅ 新增：打开模型文件夹
+ipcMain.on('open-model-folder', () => {
+    const modelsRoot = getModelsPath()
+    // 打开 models 根目录，让用户看到 ocr/translation 等子文件夹
+    if (!fs.existsSync(modelsRoot)) {
+        fs.mkdirSync(modelsRoot, { recursive: true })
+    }
+    shell.openPath(modelsRoot)
 })
 
 // OCR 识别请求
@@ -181,12 +222,43 @@ ipcMain.on('window:close', () => {
 })
 
 app.whenReady().then(async () => {
-    // 启动 OCR 服务
-    ocrService = new OcrService()
-    ocrService.start()
+    try {
+        // 1. 先等待 store 初始化完成
+        await initStore()
+        console.log('✅ Electron Store initialized')
 
-    // 创建主窗口
-    createMainWindow()
+        // 2. 注册 Settings 相关的 IPC
+        // 获取所有设置
+        ipcMain.handle('settings:get', () => {
+            return store.store // .store 返回整个配置对象
+        })
+
+        // 保存单个设置 (key, value)
+        ipcMain.on('settings:set', (event, key, value) => {
+            store.set(key, value)
+        })
+
+        // 打开配置文件 (给用户看)
+        ipcMain.on('settings:open-config', () => {
+            store.openInEditor()
+        })
+
+        const modelsRoot = getModelsPath()
+        const ocrModelPath = path.join(modelsRoot, 'ocr')
+        if (!fs.existsSync(ocrModelPath)) {
+            fs.mkdirSync(ocrModelPath, { recursive: true })
+        }
+
+        // 启动 OCR 服务
+        ocrService = new OcrService(ocrModelPath)
+        ocrService.start()
+
+        // 创建主窗口
+        createMainWindow()
+    }
+    catch (e) {
+        console.log('启动时错误', e)
+    }
 })
 
 app.on('window-all-closed', () => {

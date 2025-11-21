@@ -9,6 +9,7 @@ import sys
 import json
 import base64
 import os
+import argparse
 from io import BytesIO
 from PIL import Image
 from manga_ocr import MangaOcr
@@ -62,47 +63,38 @@ def check_local_model_integrity(model_path):
 def main():
     log_message("Starting OCR service...")
 
-    try:
-        # 获取脚本所在目录
-        if getattr(sys, "frozen", False):
-            # 如果打包成了单文件 exe (PyInstaller)
-            script_dir = os.path.dirname(sys.executable)
-        else:
-            script_dir = os.path.dirname(os.path.abspath(__file__))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model-dir", type=str, help="Path to the OCR model directory")
+    args, unknown = parser.parse_known_args()
 
-        # 本地模型路径
-        local_model_path = os.path.join(script_dir, "ocr-model")
+    mocr = None
+    local_model_path = args.model_dir  # 获取传入的路径
 
-        mocr = None
+    # 1. 优先尝试加载传入的本地路径
+    if local_model_path:
+        log_message(f"Checking model at: {local_model_path}")
 
-        # 1. 尝试加载本地模型
         if check_local_model_integrity(local_model_path):
-            log_message(f"✅ Found valid local model at: {local_model_path}")
-            log_message("Loading local model (Offline Mode)...")
+            log_message("✅ Valid local model found. Loading offline mode...")
             try:
                 mocr = MangaOcr(pretrained_model_name_or_path=local_model_path)
             except Exception as e:
-                log_message(f"⚠️ Failed to load local model despite files existing: {e}")
-                log_message("Falling back to online mode...")
+                log_message(f"⚠️ Load failed: {e}")
         else:
-            log_message(f"❗ Local model not found or incomplete at: {local_model_path}")
-
-        # 2. 如果本地加载失败或不存在，尝试在线加载
-        if mocr is None:
-            log_message("🌐 Connecting to HuggingFace (Online Mode)...")
             log_message(
-                "NOTE: First run will download the model (400MB+). Please wait."
+                "❗ Local model not found or incomplete. (Will use online mode)"
             )
-            # 不传参，默认使用 kha-white/manga-ocr-base 并自动下载/缓存
-            mocr = MangaOcr()
+    else:
+        log_message("⚠️ No model path provided.")
 
-        log_message("✅ Model loaded successfully!")
-        send_response({"status": "ready"})
+    # 2. 如果本地加载失败，走在线模式 (默认下载到 C盘 .cache)
+    if mocr is None:
+        log_message("🌐 Connecting to HuggingFace (Online Mode)...")
+        # 可以在这里指定 cache_dir 也可以默认
+        mocr = MangaOcr()
 
-    except Exception as e:
-        log_message(f"❌ CRITICAL ERROR: {str(e)}")
-        send_response({"status": "error", "message": str(e)})
-        sys.exit(1)
+    log_message("✅ Model loaded successfully!")
+    send_response({"status": "ready"})
 
     # --- 下面保持原有逻辑不变 ---
     log_message("Waiting for requests...")
