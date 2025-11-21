@@ -56,7 +56,7 @@ const toggleTranslation = async () => {
         </div>
 
         <!-- 翻译内容 -->
-        <Transition name="fade">
+        <Transition enter-active-class="transition-opacity duration-300" enter-from-class="opacity-0" leave-to-class="opacity-0">
             <!-- showTranslation为true就显示 之后若isTranslationLoading为true反之判断translatedText 存在的话就显示它 否则就显示'暂无翻译' -->
             <div v-if="showTranslation">
                 <div v-if="isTranslationLoading" class="flex items-center gap-2 text-manga-600 dark:text-manga-400">
@@ -87,15 +87,3 @@ const toggleTranslation = async () => {
         </div>
     </div>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-</style>
