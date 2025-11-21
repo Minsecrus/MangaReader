@@ -15,5 +15,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // OCR 识别
     recognizeText: (imageBase64) => {
         return ipcRenderer.invoke('ocr:recognize', imageBase64)
+    },
+
+    // 窗口控制 声明给渲染进程
+    minimizeWindow: () => ipcRenderer.send('window:minimize'),
+    maximizeWindow: () => ipcRenderer.send('window:maximize'),
+    closeWindow: () => ipcRenderer.send('window:close'),
+
+     // ✅ 新增：监听窗口状态变化
+    onWindowStateChange: (callback) => {
+        ipcRenderer.on('window:state-change', (event, state) => callback(state))
     }
 })

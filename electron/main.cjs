@@ -16,6 +16,7 @@ function createMainWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
+        frame: false, // 禁用默认边框
         webPreferences: {
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js')
@@ -37,6 +38,22 @@ function createMainWindow() {
     // Handle window closed event properly
     mainWindow.on('closed', () => {
         mainWindow = null
+    })
+
+    // ✅ 新增：监听窗口最大化/还原事件，并发送给前端
+    mainWindow.on('maximize', () => {
+        mainWindow.webContents.send('window:state-change', 'maximized')
+    })
+
+    mainWindow.on('unmaximize', () => {
+        mainWindow.webContents.send('window:state-change', 'normal')
+    })
+
+    // 窗口准备好时，也可以发送一次当前状态（可选，防止初始状态不对）
+    mainWindow.once('ready-to-show', () => {
+        if (mainWindow.isMaximized()) {
+            mainWindow.webContents.send('window:state-change', 'maximized')
+        }
     })
 }
 
@@ -137,6 +154,29 @@ ipcMain.handle('ocr:recognize', async (event, imageBase64) => {
             success: false,
             error: error.message
         }
+    }
+})
+
+// 窗口控制 IPC 监听器 监听渲染进程发送的事件
+ipcMain.on('window:minimize', () => {
+    if (mainWindow) {
+        mainWindow.minimize()
+    }
+})
+
+ipcMain.on('window:maximize', () => {
+    if (mainWindow) {
+        if (mainWindow.isMaximized()) {
+            mainWindow.unmaximize()
+        } else {
+            mainWindow.maximize()
+        }
+    }
+})
+
+ipcMain.on('window:close', () => {
+    if (mainWindow) {
+        mainWindow.close()
     }
 })
 

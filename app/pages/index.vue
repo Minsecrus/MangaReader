@@ -115,10 +115,8 @@ onMounted(() => {
         <!-- 全局 Toast 容器 -->
         <ToastContainer />
 
-        <header class="px-6 py-4 border-b border-manga-200 dark:border-manga-600 bg-manga-100 dark:bg-manga-800">
-            <Nav @open-settings="showSettingsModal = true" />
-        </header>
-
+        <!-- 自定义标题栏 -->
+        <TitleBar @open-settings="showSettingsModal = true" />
         <main class="max-w-screen-2xl mx-auto p-6">
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[calc(100vh-120px)]">
                 <div class="lg:col-span-3 relative">
