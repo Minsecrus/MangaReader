@@ -151,9 +151,21 @@ const handleSave = () => {
                                 <input type="checkbox" class="cursor-pointer" v-model="settings.enableTranslation">
                             </label>
                         </div>
+                        <!-- 翻译相关设置 -->
+                        <div v-if="settings.enableTranslation" class="space-y-3 animate-fade-in-down">
+                            <h3 class="text-sm font-medium text-manga-500 dark:text-manga-400 uppercase">
+                                🌐 翻译配置
+                            </h3>
+                            <div class="flex">
+                                <label class="inline-block text-xs text-manga-500 dark:text-manga-400">API
+                                    Key</label>
+                                <input type="password" v-model="settings.translationApiKey" placeholder="sk-xxxxxxxx"
+                                    class="w-full px-3 py-2 bg-manga-50 dark:bg-manga-900 border border-manga-200 dark:border-manga-700 rounded-lg text-sm text-manga-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" />
+                            </div>
+                        </div>
 
                         <!-- 快捷键设置 -->
-                        <div class="space-y-3">
+                        <div class="space-y-3 pt-4 border-t border-manga-100 dark:border-manga-700">
                             <h3 class="text-sm font-medium text-manga-500 dark:text-manga-400 uppercase">
                                 ⌨️ 快捷键 (OCR)
                             </h3>
