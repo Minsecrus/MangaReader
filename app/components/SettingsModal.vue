@@ -1,9 +1,10 @@
 <!-- components/SettingsModal.vue -->
 <script setup lang="ts">
 // 接收一个布尔值控制显示隐藏
-defineProps<{
+interface Props {
     show: boolean
-}>()
+}
+defineProps<Props>()
 const emit = defineEmits<{
     close: []
 }>()
