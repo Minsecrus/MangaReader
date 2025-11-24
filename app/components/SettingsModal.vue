@@ -13,6 +13,82 @@ const { showToast } = useToast()
 
 const themeOptions: ThemeOption[] = ['light', 'dark', 'system']
 
+// --- 快捷键录制逻辑 ---
+const isRecording = ref(false) // 是否正在录制
+const shortcutInputRef = useTemplateRef<HTMLInputElement>('shortcutInputRef')
+
+// 开始录制
+const startRecording = () => {
+    isRecording.value = true
+    // 提示用户
+    showToast('请按下快捷键组合，按 Enter 确认，Esc 取消，Backspace 删除', 3000)
+
+    // 清空当前显示，准备录入 (或者你可以选择保留旧的作为默认，这里选择清空以此体现“重新录制”)
+    // settings.value.ocrShortcut = '' 
+}
+
+// 结束录制 (失焦或确认)
+const stopRecording = () => {
+    isRecording.value = false
+    shortcutInputRef.value?.blur()
+}
+
+// 监听按键事件
+const handleKeyDown = (e: KeyboardEvent) => {
+    if (!isRecording.value) return
+
+    e.preventDefault() // 阻止浏览器默认行为 (比如按 Ctrl+S 不会弹出保存网页)
+    e.stopPropagation()
+
+    // 1. 处理取消 (Esc)
+    if (e.key === 'Escape') {
+        stopRecording()
+        showToast('已取消录制', 1000)
+        return
+    }
+
+    // 2. 处理确认 (Enter)
+    if (e.key === 'Enter') {
+        if (settings.value.ocrShortcut) {
+            console.log('✅ 快捷键设置成功:', settings.value.ocrShortcut)
+            showToast(`快捷键已设置为: ${settings.value.ocrShortcut}`, 1500)
+        }
+        stopRecording()
+        return
+    }
+
+    // 3. 处理退格 (Backspace) - 清除当前快捷键
+    if (e.key === 'Backspace') {
+        settings.value.ocrShortcut = ''
+        return
+    }
+
+    // 4. 构建快捷键字符串
+    const keys = []
+
+    // 判断修饰键
+    if (e.ctrlKey) keys.push('Ctrl')
+    if (e.metaKey) keys.push('Cmd') // Mac Command 键
+    if (e.altKey) keys.push('Alt')
+    if (e.shiftKey) keys.push('Shift')
+
+    // 获取主按键
+    // 排除掉修饰键本身 (例如用户只按了 Ctrl，我们不希望显示 "Ctrl + Control")
+    const specialKeys = ['Control', 'Meta', 'Alt', 'Shift']
+    if (!specialKeys.includes(e.key)) {
+        // 将按键转为大写，比如 'a' -> 'A', 'ArrowUp' -> 'ArrowUp'
+        let keyName = e.key.toUpperCase()
+        if (keyName === ' ') keyName = 'Space' // 空格特殊处理
+        keys.push(keyName)
+    }
+
+    // 只有当有按键时才更新 (避免只按 Ctrl 显示空)
+    if (keys.length > 0) {
+        // 将数组用 " + " 连接，例如 "Ctrl + Shift + A"
+        settings.value.ocrShortcut = keys.join(' + ')
+    }
+}
+
 const handleClose = () => {
     emit('close')
 }
@@ -76,6 +152,34 @@ const handleSave = () => {
                             </label>
                         </div>
 
+                        <!-- 快捷键设置 -->
+                        <div class="space-y-3">
+                            <h3 class="text-sm font-medium text-manga-500 dark:text-manga-400 uppercase">
+                                ⌨️ 快捷键 (OCR)
+                            </h3>
+                            <div class="relative">
+                                <input ref="shortcutInputRef" type="text" readonly
+                                    :value="isRecording ? (settings.ocrShortcut || '请按下按键...') : (settings.ocrShortcut || '未设置')"
+                                    @click="startRecording" @keydown="handleKeyDown" @blur="stopRecording"
+                                    class="w-full px-3 py-2 rounded-lg text-sm font-mono text-center cursor-pointer transition-all border outline-none"
+                                    :class="[
+                                        isRecording
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 text-blue-600 dark:text-blue-300 ring-2 ring-blue-200 dark:ring-blue-800'
+                                            : 'bg-manga-50 dark:bg-manga-900 border-manga-200 dark:border-manga-700 text-manga-600 dark:text-manga-300 hover:border-manga-400'
+                                    ]" />
+                                <!-- 录制状态指示器 -->
+                                <span v-if="isRecording" class="absolute right-3 top-2.5 flex h-3 w-3">
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                </span>
+                            </div>
+                            <p class="text-xs text-center text-manga-400">
+                                {{ isRecording ? '按 Esc 取消，Enter 确认' : '点击上方框框开始录制' }}
+                            </p>
+                        </div>
+
+                        <!-- 外观设置 -->
                         <div class="space-y-3">
                             <h3 class="text-sm font-medium text-manga-500 uppercase">🎨 外观</h3>
                             <div class="flex gap-4 bg-manga-50 dark:bg-manga-900 p-2 rounded-lg">
