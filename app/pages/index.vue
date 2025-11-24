@@ -15,7 +15,7 @@ const handleOcr = () => {
     isOcrMode.value = true
 }
 
-const { initSettings } = useSettings()
+const { initSettings, settings } = useSettings()
 
 // ocr识别完成 处理ocrCaptureImage
 const handleOcrCapture = async (selectionData: { left: number, top: number, width: number, height: number }) => {
@@ -129,9 +129,9 @@ onMounted(() => {
                     <OcrButton @ocr-btn-click="handleOcr" :is-recognizing="isOcrRecognizing" :is-in-ocr="isOcrMode" />
                     <OriginalText :is-recognizing="isOcrRecognizing" v-model:local-text="originalText" />
                     <!-- 这里indexvue起到一个父组件传递originalText的作用 v-model 传递给originalText再传递给Translationvue -->
-                    <TokenizedWords :origin-text="originalText" />
-                    <Translation :original-text="originalText" />
-                    <HintCard text="提示：点击分词结果中的单词可查看详情" />
+                    <TokenizedWords v-if="settings.enableTokenization" :origin-text="originalText" />
+                    <Translation v-if="settings.enableTranslation" :original-text="originalText" />
+                    <HintCard v-if="settings.enableTokenization" text="提示：点击分词结果中的单词可查看详情" />
                 </div>
             </div>
         </main>
