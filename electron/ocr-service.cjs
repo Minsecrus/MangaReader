@@ -18,7 +18,7 @@ class OcrService {
 
         if (isDev) {
             // 注意：这里路径根据你的项目结构微调，确保能找到 python.exe
-            pythonPath = path.join(__dirname, '../services/venv/Scripts/python.exe') 
+            pythonPath = path.join(__dirname, '../services/venv/Scripts/python.exe')
             scriptPath = path.join(__dirname, '../services/ocr_service.py')
         } else {
             pythonPath = path.join(process.resourcesPath, 'services/ocr-service.exe')
@@ -90,38 +90,44 @@ class OcrService {
     _handleResponse(response) {
         if (response.status === 'ready') {
             this.isReady = true
-            console.log('✅ OCR Service is Ready to accept requests!')
+            console.log('✅ OCR Service is Ready!')
             return
         }
 
-        // 简单的错误处理
-        if (response.status === 'error') {
-            console.error('❌ OCR Init Error:', response.message)
-            return
-        }
+        // 关键点 1：必须从 response 里解构出 tokens
+        const { id, success, text, tokens, error } = response
 
-        const { id, success, text, error } = response
         if (id !== undefined && this.pendingRequests.has(id)) {
             const { resolve, reject } = this.pendingRequests.get(id)
             this.pendingRequests.delete(id)
-            if (success) resolve(text)
-            else reject(new Error(error))
+
+            if (success) {
+                // 关键点 2：如果是分词请求，Python返回的是 tokens，text 是空的
+                // 所以这里要判断：如果有 tokens，就返回对象；否则返回 text 字符串
+                if (tokens) {
+                    resolve({ tokens: tokens })
+                } else {
+                    resolve(text)
+                }
+            } else {
+                reject(new Error(error))
+            }
         }
     }
 
-    async recognize(imageBase64) {
+    // ✅ 新增：通用请求发送方法 (避免代码重复)
+    _sendRequest(payload, timeout = 120000) {
         return new Promise((resolve, reject) => {
             if (!this.isReady) {
-                // 如果服务还没准备好（比如正在下载模型），直接拒绝或者等待
-                // 这里为了简单，直接返回错误提示
-                reject(new Error('OCR Service is initializing (downloading model?)... please wait.'))
+                reject(new Error('OCR Service is initializing... please wait.'))
                 return
             }
 
             const id = this.requestId++
             this.pendingRequests.set(id, { resolve, reject })
 
-            const request = { id, command: 'recognize', image: imageBase64 }
+            // 合并 ID 和 具体的请求数据
+            const request = { ...payload, id }
 
             try {
                 this.process.stdin.write(JSON.stringify(request) + '\n')
@@ -131,16 +137,28 @@ class OcrService {
                 return
             }
 
-            // --- 修改点：超时设置 ---
-            // 因为 OCR 有时候在 CPU 上跑比较慢，或者第一次预热慢
-            // 建议设置长一点，比如 2 分钟
+            // 超时处理
             setTimeout(() => {
                 if (this.pendingRequests.has(id)) {
                     this.pendingRequests.delete(id)
-                    reject(new Error('OCR request timeout (120s)'))
+                    reject(new Error(`Request timeout (${timeout}ms)`))
                 }
-            }, 120000)
+            }, timeout)
         })
+    }
+
+    // 1. OCR 识别
+    async recognize(imageBase64) {
+        // 调用通用方法
+        return this._sendRequest({ command: 'recognize', image: imageBase64 })
+    }
+
+    // 2. 分词
+    async tokenize(text) {
+        // 调用通用方法，分词比较快，超时设短一点也没关系 (比如 10秒)
+        // 注意：这里传的是 text，不是 image
+        // _handleResponse 会返回 { tokens: [...] }
+        return this._sendRequest({ command: 'tokenize', text: text }, 30000)
     }
 
     stop() {

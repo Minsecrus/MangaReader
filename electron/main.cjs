@@ -198,6 +198,24 @@ ipcMain.handle('ocr:recognize', async (event, imageBase64) => {
     }
 })
 
+// 分词请求
+ipcMain.handle('ocr:tokenize', async (event, text) => {
+    try {
+        if (!ocrService) return { success: false, error: "Service not ready" }
+        // 调用 Service
+        const result = await ocrService.tokenize(text)
+        console.log('Tokenize result:', result)
+        if (!result) {
+            throw new Error('Service returned empty result')
+        }
+
+        // Service 返回的是 { tokens: [...] }
+        return { success: true, tokens: result.tokens }
+    } catch (e) {
+        return { success: false, error: e.message }
+    }
+})
+
 // 窗口控制 IPC 监听器 监听渲染进程发送的事件
 ipcMain.on('window:minimize', () => {
     if (mainWindow) {

@@ -26,21 +26,17 @@ const tokenizeText = async (text: string) => {
     isTokenizing.value = true
 
     try {
-        // 这里调用实际的分词 API
-        console.log('开始分词:', text)
+        if (window.electronAPI && window.electronAPI.tokenize) {
+            const result = await window.electronAPI.tokenize(text)
+            if (result && result.success && result.tokens) {
+                tokens.value = result.tokens
+            } else {
+                console.error('Backend error:', result.error)
+            }
+        } else {
+            console.warn('Electron API not found (Browser mode?)')
+        }
 
-        // 模拟 API 调用延迟
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        // 模拟 API 返回结果
-        tokens.value = [
-            { word: '今日', type: 'noun' },
-            { word: 'は', type: 'particle' },
-            { word: 'いい', type: 'adjective' },
-            { word: '天気', type: 'noun' },
-            { word: 'です', type: 'verb' },
-            { word: 'ね', type: 'particle' },
-        ]
     } catch (error) {
         console.error('分词失败:', error)
         tokens.value = []

@@ -13,12 +13,30 @@ import argparse
 from io import BytesIO
 from PIL import Image
 from manga_ocr import MangaOcr
+from sudachipy import dictionary, SplitMode
 
 # 增加 stdout 的缓冲设置，防止打印进度条时卡住
 import io
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", line_buffering=True)
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", line_buffering=True)
+
+# --- 词性映射表 (日语 -> 前端类型) ---
+# Sudachi 的词性非常详细，我们需要将其简化为前端 TokenizedWords.vue 需要的类型
+POS_MAPPING = {
+    "名詞": "noun",
+    "代名詞": "noun",
+    "動詞": "verb",
+    "形容詞": "adjective",
+    "形状詞": "adjective",  # 形容动词
+    "副詞": "adverb",  # 前端暂时没定义，可以归为 other 或加类型
+    "助詞": "particle",
+    "助動詞": "particle",  # 也可以归为 verb，视情况而定
+    "感動詞": "other",
+    "接頭辞": "other",
+    "接尾辞": "other",
+    "記号": "other",
+}
 
 
 def log_message(message):
@@ -68,6 +86,23 @@ def main():
     args, unknown = parser.parse_known_args()
 
     mocr = None
+    sudachi_tokenizer = None
+    sudachi_init_error = None
+
+    # 2. 初始化 Sudachi 分词器
+    log_message("Initializing Sudachi Tokenizer...")
+    try:
+        # 加载核心词典
+        sudachi_tokenizer = dictionary.Dictionary(dict="core").create()
+        mode = SplitMode.C  # Mode C 是最长分割，适合阅读 (Mode A 是最细分割)
+        log_message("✅ Sudachi Initialized.")
+    except Exception as e:
+        error_str = str(e)
+        sudachi_init_error = error_str
+        log_message(f"❌ Sudachi Init Failed: {error_str}")
+        sudachi_tokenizer = None
+        sudachi_tokenizer = None
+
     local_model_path = args.model_dir  # 获取传入的路径
 
     # 1. 优先尝试加载传入的本地路径
@@ -100,14 +135,17 @@ def main():
     log_message("Waiting for requests...")
 
     for line in sys.stdin:
+        req_id = None
         try:
             line = line.strip()
             if not line:
                 continue
 
             request = json.loads(line)
+            req_id = request.get("id")  # 获取 ID
             command = request.get("command")
 
+            # === 1. OCR 识别 ===
             if command == "recognize":
                 request_id = request.get("id")
                 log_message(f"Processing request {request_id}")
@@ -123,6 +161,51 @@ def main():
                 log_message(f"Result: {text}")
                 send_response({"id": request_id, "success": True, "text": text})
 
+            # 分词
+            elif command == "tokenize":
+                # log_message(f"Tokenizing {req_id}")
+                log_message(f"DEBUG: Received tokenize request ID: {req_id}")
+                text = request.get("text", "")
+
+                if not sudachi_tokenizer:
+                    # 如果初始化失败，把具体的 sudachi_init_error 返回给前端
+                    error_msg = f"Tokenizer init failed: {sudachi_init_error or 'Unknown error'}"
+                    log_message(error_msg)  # 在后台也打印一下
+
+                    send_response({"id": req_id, "success": False, "error": error_msg})
+                    continue  # 跳过本次循环
+
+                try:
+                    # 🛑 调试日志 2：开始计算
+                    log_message(f"DEBUG: Start tokenizing text length: {len(text)}")
+
+                    tokens = []
+                    results = sudachi_tokenizer.tokenize(text, mode)
+
+                    # 🛑 调试日志 3：计算完成，开始格式化
+                    log_message(f"DEBUG: Tokenized finished, count: {len(results)}")
+
+                    for t in results:
+                        pos_list = t.part_of_speech()
+                        main_pos = pos_list[0]
+                        frontend_type = POS_MAPPING.get(main_pos, "other")
+                        tokens.append(
+                            {
+                                "word": t.surface(),
+                                "type": frontend_type,
+                            }
+                        )
+
+                    # 🛑 调试日志 4：准备发送响应
+                    log_message("DEBUG: Sending response...")
+                    send_response({"id": req_id, "success": True, "tokens": tokens})
+
+                except Exception as e:
+                    # 🛑 捕获分词过程中的特殊错误
+                    log_message(f"ERROR during tokenization: {str(e)}")
+                    send_response({"id": req_id, "success": False, "error": str(e)})
+
+            # 其他命令
             elif command == "ping":
                 send_response({"success": True, "message": "pong"})
 
