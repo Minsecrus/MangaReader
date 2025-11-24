@@ -132,7 +132,7 @@ const handleSave = () => {
                     </div>
 
                     <!-- 内容区域 -->
-                    <div class="space-y-6">
+                    <div class="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                         <!-- 模块开关 -->
                         <div class="space-y-3">
                             <h3 class="text-sm font-medium text-manga-500 dark:text-manga-400 uppercase">功能模块</h3>
@@ -229,3 +229,19 @@ const handleSave = () => {
         </div>
     </Teleport>
 </template>
+
+<style scoped>
+/* 可选：为滚动条添加一点样式 */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    border-radius: 20px;
+}
+</style>
