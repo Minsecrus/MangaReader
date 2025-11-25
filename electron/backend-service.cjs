@@ -2,7 +2,7 @@
 const { spawn } = require('child_process')
 const path = require('path')
 
-class OcrService {
+class BackendService {
     constructor(modelPath) {
         this.modelPath = modelPath
         this.process = null
@@ -19,9 +19,9 @@ class OcrService {
         if (isDev) {
             // 注意：这里路径根据你的项目结构微调，确保能找到 python.exe
             pythonPath = path.join(__dirname, '../services/venv/Scripts/python.exe')
-            scriptPath = path.join(__dirname, '../services/ocr_service.py')
+            scriptPath = path.join(__dirname, '../services/backend_service.py')
         } else {
-            pythonPath = path.join(process.resourcesPath, 'services/ocr-service.exe')
+            pythonPath = path.join(process.resourcesPath, 'services/backend.exe')
             scriptPath = null
         }
 
@@ -166,4 +166,4 @@ class OcrService {
     }
 }
 
-module.exports = { OcrService }
+module.exports = { BackendService }

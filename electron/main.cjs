@@ -2,7 +2,7 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, screen, globalShortcut, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
-const { OcrService } = require('./ocr-service.cjs')
+const { BackendService } = require('./backend-service.cjs')
 
 // 判断是否为开发环境 (由 Electron Forge 自动设置)
 const isDev = !app.isPackaged
@@ -10,7 +10,7 @@ const isDev = !app.isPackaged
 let mainWindow // 将 mainWindow 提升到全局，以便我们可以从 ipcMain 访问它
 
 let captureWindow = null
-let ocrService = null // OCR 服务实例
+let backendService = null // OCR 服务实例
 
 // 全局 store 变量
 let store
@@ -176,14 +176,14 @@ ipcMain.handle('ocr:recognize', async (event, imageBase64) => {
     try {
         console.log('Received OCR request, image size:', imageBase64.length)
 
-        if (!ocrService || !ocrService.isReady) {
+        if (!backendService || !backendService.isReady) {
             return {
                 success: false,
                 error: 'OCR service not ready. Please wait...'
             }
         }
 
-        const text = await ocrService.recognize(imageBase64)
+        const text = await backendService.recognize(imageBase64)
 
         return {
             success: true,
@@ -201,9 +201,9 @@ ipcMain.handle('ocr:recognize', async (event, imageBase64) => {
 // 分词请求
 ipcMain.handle('ocr:tokenize', async (event, text) => {
     try {
-        if (!ocrService) return { success: false, error: "Service not ready" }
+        if (!backendService) return { success: false, error: "Service not ready" }
         // 调用 Service
-        const result = await ocrService.tokenize(text)
+        const result = await backendService.tokenize(text)
         console.log('Tokenize result:', result)
         if (!result) {
             throw new Error('Service returned empty result')
@@ -268,8 +268,8 @@ app.whenReady().then(async () => {
         }
 
         // 启动 OCR 服务
-        ocrService = new OcrService(ocrModelPath)
-        ocrService.start()
+        backendService = new BackendService(ocrModelPath)
+        backendService.start()
 
         // 监听打开外部链接的请求
         ipcMain.handle('shell:open', async (event, url) => {
