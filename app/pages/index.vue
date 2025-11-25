@@ -107,6 +107,23 @@ const handleOcrCancel = () => {
 
 onMounted(() => {
     initSettings()
+
+    // 监听来自 Electron 的快捷键信号
+    if (window.electronAPI) {
+        // 当快捷键按下 -> 执行 handleOcr (和点击按钮效果一样)
+        const cleanup = window.electronAPI.onShortcutTriggered(() => {
+            console.log('Vue 收到快捷键信号，启动 OCR')
+            // 只有当前不在 OCR 模式，且不在识别中才启动
+            if (!isOcrMode.value && !isOcrRecognizing.value) {
+                handleOcr()
+            }
+        })
+
+        // 页面卸载时清理监听 (虽然 index.vue 通常不卸载，但这是好习惯)
+        onUnmounted(() => {
+            cleanup()
+        })
+    }
 })
 </script>
 

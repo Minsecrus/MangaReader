@@ -34,5 +34,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getSettings: () => ipcRenderer.invoke('settings:get'),
     saveSetting: (key, value) => ipcRenderer.send('settings:set', key, value),
     openConfigFile: () => ipcRenderer.send('settings:open-config'),
-    openLink: (url) => ipcRenderer.invoke('shell:open', url)
+    openLink: (url) => ipcRenderer.invoke('shell:open', url),
+
+    // 告诉主进程：我要设置这个快捷键
+    setGlobalShortcut: (shortcut) => ipcRenderer.invoke('settings:set-shortcut', shortcut),
+
+    // 监听主进程的消息：快捷键被按下了！
+    onShortcutTriggered: (callback) => {
+        const handler = (_event, value) => callback(value)
+        ipcRenderer.on('ocr:shortcut-triggered', handler)
+        // 返回一个清理函数，方便在组件卸载时移除监听
+        return () => ipcRenderer.removeListener('ocr:shortcut-triggered', handler)
+    }
 })
