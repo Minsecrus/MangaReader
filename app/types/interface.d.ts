@@ -41,6 +41,9 @@ export interface IElectronAPI {
     getSettings: () => Promise<AppSettings>
     saveSetting: (key: string, value: any) => void
     openConfigFile: () => void
+
+    // About页面打开链接
+    openLink: (url: string) => Promise<void>
 }
 
 declare global {

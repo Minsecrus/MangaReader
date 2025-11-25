@@ -3,7 +3,7 @@
 // 定义 Token 类型
 export interface Token {
     word: string
-    type: string // 'noun' | 'verb' | 'particle' 等
+    type: 'noun' | 'verb' | 'particle' | 'adjective' | 'other'
     reading?: string
     dictionary_form?: string
 }
@@ -41,6 +41,9 @@ export interface IElectronAPI {
     getSettings: () => Promise<AppSettings>
     saveSetting: (key: string, value: any) => void
     openConfigFile: () => void
+
+    // About页面打开链接
+    openLink: (url: string) => Promise<void>
 }
 
 declare global {

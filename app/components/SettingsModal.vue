@@ -219,6 +219,7 @@ const handleSave = () => {
                                 </Button>
                             </div>
                         </div>
+                        <About />
                     </div>
 
                     <!-- 底部按钮 -->

@@ -271,6 +271,14 @@ app.whenReady().then(async () => {
         ocrService = new OcrService(ocrModelPath)
         ocrService.start()
 
+        // 监听打开外部链接的请求
+        ipcMain.handle('shell:open', async (event, url) => {
+            // 安全起见，只允许打开 http/https 协议
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                await shell.openExternal(url)
+            }
+        })
+
         // 创建主窗口
         createMainWindow()
     }

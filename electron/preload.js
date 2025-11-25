@@ -33,5 +33,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // ✅ 新增：Settings API
     getSettings: () => ipcRenderer.invoke('settings:get'),
     saveSetting: (key, value) => ipcRenderer.send('settings:set', key, value),
-    openConfigFile: () => ipcRenderer.send('settings:open-config')
+    openConfigFile: () => ipcRenderer.send('settings:open-config'),
+    openLink: (url) => ipcRenderer.invoke('shell:open', url)
 })
