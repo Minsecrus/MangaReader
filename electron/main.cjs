@@ -341,8 +341,8 @@ app.on('will-quit', () => {
 
 app.on('window-all-closed', () => {
     // 停止 OCR 服务
-    if (ocrService) {
-        ocrService.stop()
+    if (backendService) {
+        backendService.stop()
     }
 
     if (process.platform !== 'darwin') {
