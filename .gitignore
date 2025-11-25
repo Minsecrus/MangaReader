@@ -27,3 +27,7 @@ services/venv
 
 models/*
 !models/.gitkeep
+
+# Python 缓存文件
+__pycache__/
+*.pyc
