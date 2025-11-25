@@ -328,25 +328,23 @@ app.whenReady().then(async () => {
     }
 })
 
-// ✅ 专门用于处理退出前的清理工作
-app.on('will-quit', () => {
-    // 注销所有快捷键
-    globalShortcut.unregisterAll()
-
-    // 如果有其他需要销毁的服务也可以放在这
-    if (backendService) {
-        backendService.stop() // 假设你的 backendService 有 stop 方法
+// 当所有窗口关闭时
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+        app.quit() // 这行代码执行后，会自动触发 'will-quit'
     }
 })
 
-app.on('window-all-closed', () => {
-    // 停止 OCR 服务
+app.on('will-quit', () => {
+    console.log('App is quitting, cleaning up...')
+
+    // 1. 注销快捷键
+    globalShortcut.unregisterAll()
+
+    // 2. 停止 OCR 服务
     if (backendService) {
         backendService.stop()
-    }
-
-    if (process.platform !== 'darwin') {
-        app.quit()
+        // backendService = null // 可选
     }
 })
 
