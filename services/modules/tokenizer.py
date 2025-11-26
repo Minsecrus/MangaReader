@@ -32,24 +32,53 @@ class JapaneseTokenizer:
             self.tokenizer = None
             self.init_error = str(e)
 
+    def _katakana_to_hiragana(self, text):
+        """
+        辅助函数：将片假名转换为平假名
+        利用 Unicode 偏移量：片假名 = 平假名 + 0x60
+        """
+        result = []
+        for char in text:
+            code = ord(char)
+            # 片假名 Unicode 范围 (0x30A1 - 0x30F6)
+            if 0x30A1 <= code <= 0x30F6:
+                result.append(chr(code - 0x60))
+            else:
+                result.append(char)
+        return "".join(result)
+
     def tokenize(self, text):
         if not self.tokenizer:
-            raise Exception(
-                f"Tokenizer not ready: {getattr(self, 'init_error', 'Unknown Error')}"
-            )
+            raise Exception(f"Tokenizer not ready")
 
         results = self.tokenizer.tokenize(text, self.mode)
         tokens = []
 
         for t in results:
+            surface = t.surface()  # 原词，例如 "食べる" 或 "ながら"
+
+            # 1. 获取读音 (Sudachi 默认返回片假名，如 "タベル" 或 "ナガラ")
+            reading_katakana = t.reading_form()
+
+            # 2. 转换为平假名 (如 "たべる" 或 "ながら")
+            reading_hiragana = self._katakana_to_hiragana(reading_katakana)
+
+            # 3. 智能判断是否需要返回读音
+            # 如果原词和平假名读音一样（例如 "ながら" == "ながら"），就设为 None
+            # 或者原词就是片假名且读音也是片假名（例如 "ラーメン"），也设为 None
+            final_reading = None
+            if surface != reading_hiragana and surface != reading_katakana:
+                final_reading = reading_hiragana
+
             pos_list = t.part_of_speech()
             main_pos = pos_list[0]
             frontend_type = self.POS_MAPPING.get(main_pos, "other")
+
             tokens.append(
                 {
-                    "word": t.surface(),
+                    "word": surface,
+                    "reading": final_reading,  # 新增字段：如果有值则显示，无值则不显示
                     "type": frontend_type,
-                    # 未来可以在这里加: "reading": t.reading_form(), "dictionary_form": t.dictionary_form()
                 }
             )
 

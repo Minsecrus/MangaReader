@@ -3,6 +3,7 @@
 type TokenType = 'noun' | 'verb' | 'particle' | 'adjective' | 'other'
 interface Prop {
     word: string
+    reading?: string
     type?: TokenType
 }
 
@@ -31,8 +32,28 @@ const handleClick = () => {
 
 <template>
     <button
-        class="px-3 py-1.5 rounded text-sm font-medium transition-all hover:scale-105 cursor-pointer font-ja leading-[1.8]"
+        class="group relative px-2 pt-2 rounded transition-all hover:scale-105 cursor-pointer active:translate-y-0.5"
         :class="getTokenClasses(type)" @click="handleClick">
-        {{ word }}
+        <!-- 使用 ruby 标签实现振假名 -->
+        <ruby class="font-ja text-sm font-medium">
+            {{ word }}
+            <!-- 只有当 reading 存在时才显示注音 -->
+            <rt v-if="reading"
+                class="text-[0.6rem] text-white/90 font-normal select-none opacity-80 group-hover:opacity-100">
+                {{ reading }}
+            </rt>
+        </ruby>
     </button>
 </template>
+
+<style scoped>
+/* 
+  微调 ruby 对齐 
+  有些浏览器 rt 默认字体可能偏小或偏大
+*/
+rt {
+    font-family: sans-serif;
+    /* 读音通常用无衬线字体更清晰 */
+    text-align: center;
+}
+</style>

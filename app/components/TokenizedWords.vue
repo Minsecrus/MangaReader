@@ -2,6 +2,7 @@
 <script setup lang="ts">
 interface Token {
     word: string
+    reading?: string
     type?: 'noun' | 'verb' | 'particle' | 'adjective' | 'other'
 }
 
@@ -90,8 +91,9 @@ onUnmounted(() => {
         </div>
 
         <!-- 分词结果 -->
-        <div v-else-if="tokens.length > 0" class="flex gap-2 flex-wrap">
-            <TokenButton v-for="(token, index) in tokens" :key="index" :word="token.word" :type="token.type" />
+        <div v-else-if="tokens.length > 0" class="flex gap-2 flex-wrap items-end">
+            <TokenButton v-for="(token, index) in tokens" :key="index" :word="token.word" :type="token.type"
+                :reading="token.reading" />
         </div>
 
         <!-- 空状态 没有在等待API同时tokens.length长度小于等于0 -->
