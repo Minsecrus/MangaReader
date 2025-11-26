@@ -2,3 +2,4 @@ pillow>=10.0.0
 manga-ocr
 sudachipy
 sudachidict_core
+huggingface_hub>=0.10.0

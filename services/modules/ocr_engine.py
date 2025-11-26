@@ -4,42 +4,86 @@ import base64
 from io import BytesIO
 from PIL import Image
 from manga_ocr import MangaOcr
+from huggingface_hub import snapshot_download
 from .utils import log_message
 
 
 class OCREngine:
     def __init__(self, model_dir=None):
         self.mocr = None
-        self._load_model(model_dir)
+        # 如果没有传入路径，抛出错误，因为我们现在的策略是必须指定路径
+        if not model_dir:
+            raise ValueError("Model directory is required for cleaner deployment.")
 
-    def _check_integrity(self, model_path):
-        """检查模型完整性"""
-        required_files = ["config.json", "vocab.txt"]  # 简化检查，关键文件在就行
+        self.model_dir = model_dir
+        self._load_model()
+
+    def _check_integrity(self):
+        """检查本地模型文件是否完整"""
+        if not os.path.exists(self.model_dir):
+            return False
+
+        # 关键文件列表
+        required_files = [
+            "config.json",
+            "preprocessor_config.json",
+            "tokenizer_config.json",
+            "vocab.txt",
+        ]
+
+        # 1. 检查小文件
         for f in required_files:
-            if not os.path.exists(os.path.join(model_path, f)):
+            if not os.path.exists(os.path.join(self.model_dir, f)):
+                log_message(f"Missing file: {f}")
                 return False
-        return os.path.exists(
-            os.path.join(model_path, "model.safetensors")
-        ) or os.path.exists(os.path.join(model_path, "pytorch_model.bin"))
 
-    def _load_model(self, model_dir):
-        # 1. 尝试本地加载
-        if model_dir and os.path.exists(model_dir):
-            log_message(f"Checking local OCR model at: {model_dir}")
-            if self._check_integrity(model_dir):
-                try:
-                    self.mocr = MangaOcr(pretrained_model_name_or_path=model_dir)
-                    log_message("✅ OCR Engine loaded (Offline Mode).")
-                    return
-                except Exception as e:
-                    log_message(f"⚠️ Local load failed: {e}")
-            else:
-                log_message("❗ Local model incomplete. Switching to Online Mode.")
+        # 2. 检查大权重文件 (safetensors 是新标准，bin 是旧标准，兼容一下)
+        has_safetensors = os.path.exists(
+            os.path.join(self.model_dir, "model.safetensors")
+        )
+        has_bin = os.path.exists(os.path.join(self.model_dir, "pytorch_model.bin"))
 
-        # 2. 在线加载 (HuggingFace)
-        log_message("🌐 Loading OCR model from HuggingFace...")
-        self.mocr = MangaOcr()  # 默认下载
-        log_message("✅ OCR Engine loaded (Online Mode).")
+        if not (has_safetensors or has_bin):
+            log_message(
+                "Missing model weights (model.safetensors or pytorch_model.bin)"
+            )
+            return False
+
+        return True
+
+    def _load_model(self):
+        # 1. 检查本地是否存在且完整
+        if self._check_integrity():
+            log_message(f"✅ Found valid model at: {self.model_dir}")
+        else:
+            # 2. 本地不完整，执行定向下载
+            log_message(
+                f"⬇️ Model missing or incomplete. Downloading to {self.model_dir}..."
+            )
+            log_message("⏳ This may take a while (approx 400MB)...")
+
+            try:
+                # 使用 snapshot_download 直接下载到指定文件夹
+                # 这会避免使用系统缓存，直接把文件放进 App 的 models/ocr 目录
+                snapshot_download(
+                    repo_id="kha-white/manga-ocr-base",
+                    local_dir=self.model_dir,
+                    local_dir_use_symlinks=False,  # 关键：不使用软链接，确保是真实文件
+                )
+                log_message("✅ Download complete!")
+            except Exception as e:
+                log_message(f"❌ Download failed: {e}")
+                raise e
+
+        # 3. 加载模型 (此时文件一定在本地了)
+        log_message("🚀 Loading OCR Engine from local storage...")
+        try:
+            # 强制指定 path，MangaOcr 就会直接读文件，不再联网也不读缓存
+            self.mocr = MangaOcr(pretrained_model_name_or_path=self.model_dir)
+            log_message("✅ OCR Engine initialized successfully.")
+        except Exception as e:
+            log_message(f"❌ Failed to load model: {e}")
+            raise e
 
     def recognize(self, image_base64):
         """执行 OCR"""
