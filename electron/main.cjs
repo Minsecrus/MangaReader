@@ -216,6 +216,17 @@ ipcMain.handle('ocr:tokenize', async (event, text) => {
     }
 })
 
+// 翻译请求
+ipcMain.handle('ocr:translate', async (event, text) => {
+    try {
+        if (!backendService) return { success: false, error: "Service not ready" }
+        const result = await backendService.translate(text)
+        return { success: true, translation: result.translation }
+    } catch (e) {
+        return { success: false, error: e.message }
+    }
+})
+
 // 窗口控制 IPC 监听器 监听渲染进程发送的事件
 ipcMain.on('window:minimize', () => {
     if (mainWindow) {

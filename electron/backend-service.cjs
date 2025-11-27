@@ -95,7 +95,7 @@ class BackendService {
         }
 
         // 关键点 1：必须从 response 里解构出 tokens
-        const { id, success, text, tokens, error } = response
+        const { id, success, text, tokens, translation, error } = response
 
         if (id !== undefined && this.pendingRequests.has(id)) {
             const { resolve, reject } = this.pendingRequests.get(id)
@@ -106,6 +106,9 @@ class BackendService {
                 // 所以这里要判断：如果有 tokens，就返回对象；否则返回 text 字符串
                 if (tokens) {
                     resolve({ tokens: tokens })
+                } else if (translation) {
+                    // 新增：如果是翻译任务，返回翻译结果对象
+                    resolve({ translation: translation })
                 } else {
                     resolve(text)
                 }
@@ -159,6 +162,12 @@ class BackendService {
         // 注意：这里传的是 text，不是 image
         // _handleResponse 会返回 { tokens: [...] }
         return this._sendRequest({ command: 'tokenize', text: text }, 30000)
+    }
+
+    // 3. 翻译
+    async translate(text) {
+        // 超时设长一点，因为第一次要下载模型 (比如 10分钟 = 600000ms)
+        return this._sendRequest({ command: 'translate', text: text }, 600000)
     }
 
     stop() {

@@ -3,6 +3,7 @@ import sys
 import json
 import argparse
 import io
+import os
 
 # 解决 Windows 下编码问题
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", line_buffering=True)
@@ -13,6 +14,9 @@ from modules.utils import log_message, send_response
 from modules.ocr_engine import OCREngine
 from modules.tokenizer import JapaneseTokenizer
 
+# 引入 Sakura 工厂
+from modules.translator import get_translator_engine
+
 
 def main():
     log_message("Starting Backend Service...")
@@ -22,11 +26,23 @@ def main():
     parser.add_argument("--model-dir", type=str, help="Path to OCR model")
     args, _ = parser.parse_known_args()
 
+    models_root = os.path.dirname(args.model_dir)
+    translation_root = os.path.join(models_root, "translation")
+
+    if not os.path.exists(translation_root):
+        os.makedirs(translation_root, exist_ok=True)
+
     # 2. 初始化各模块
     # 注意：如果模块加载很慢，这会阻塞启动。目前逻辑是启动时加载。
     # 如果未来想秒开，可以把初始化放在第一次调用时 (Lazy Load)。
     ocr_engine = OCREngine(model_dir=args.model_dir)
     tokenizer = JapaneseTokenizer()
+
+    log_message(f"Init Translator (Sakura) root: {translation_root}")
+    # 强制指定使用 sakura
+    translator = get_translator_engine("sakura", translation_root)
+    # 尝试加载 (如果没下载，这里会失败，但在 translate 命令里会触发下载)
+    translator.initialize()
 
     # 3. 告诉 Electron 我们准备好了
     send_response({"status": "ready"})
@@ -62,9 +78,24 @@ def main():
                     send_response({"id": req_id, "success": False, "error": str(e)})
 
             # -> 未来：翻译任务
-            # elif command == "translate":
-            #     result = translator.translate(...)
-            #     send_response(...)
+            elif command == "translate":
+                try:
+                    text = request.get("text", "")
+
+                    # 自动下载/加载逻辑
+                    if not translator.is_ready:
+                        log_message("Sakura model not ready. Auto-downloading...")
+                        translator.download_model()
+                        translator.initialize()
+
+                    result = translator.translate(text)
+                    send_response(
+                        {"id": req_id, "success": True, "translation": result}
+                    )
+
+                except Exception as e:
+                    log_message(f"Translation Error: {e}")
+                    send_response({"id": req_id, "success": False, "error": str(e)})
 
             elif command == "ping":
                 send_response({"success": True, "message": "pong"})

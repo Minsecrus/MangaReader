@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 分词识别
     tokenize: (text) => ipcRenderer.invoke('ocr:tokenize', text),
 
+    // 翻译
+    translate: (text) => ipcRenderer.invoke('ocr:translate', text),
+
     // 窗口控制 声明给渲染进程
     minimizeWindow: () => ipcRenderer.send('window:minimize'),
     maximizeWindow: () => ipcRenderer.send('window:maximize'),

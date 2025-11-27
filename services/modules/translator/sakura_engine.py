@@ -1,0 +1,101 @@
+# services/modules/translator/sakura_engine.py
+import os
+import threading
+from .base import BaseTranslator
+from huggingface_hub import hf_hub_download
+from ..utils import log_message
+
+try:
+    from llama_cpp import Llama
+except ImportError:
+    Llama = None
+
+
+class SakuraEngine(BaseTranslator):
+    def __init__(self, model_root_dir):
+        path = os.path.join(model_root_dir, "sakura")
+        super().__init__(path)
+
+        # ✅ 仓库 ID: 社区量化版仓库
+        self.repo_id = "shing3232/Sakura-1.5B-Qwen2.5-v1.0-GGUF-IMX"
+
+        # ✅ 文件名: 修正为真实存在的 Q5KS 版本 (1.26 GB)
+        self.filename = "sakura-1.5b-qwen2.5-v1.0-Q5KS.gguf"
+
+        self.llm = None
+        self.lock = threading.Lock()
+
+    def download_model(self, progress_callback=None):
+        log_message(f"⬇️ Downloading SakuraLLM (1.5B) to {self.model_dir}...")
+        log_message(f"   Repo: {self.repo_id}")
+        log_message(f"   Target: {self.filename} (~1.26GB)")
+
+        try:
+            # ✅ 修正：移除过时参数，消除警告
+            # 新版 hf_hub_download 默认就是断点续传 + 下载实体文件
+            file_path = hf_hub_download(
+                repo_id=self.repo_id,
+                filename=self.filename,
+                local_dir=self.model_dir,
+                token=False,  # 匿名下载
+            )
+            log_message("✅ SakuraLLM download complete.")
+            return True
+        except Exception as e:
+            log_message(f"❌ Download failed: {e}")
+            raise e
+
+    def initialize(self):
+        if Llama is None:
+            log_message("❌ Error: llama-cpp-python not installed.")
+            self.is_ready = False
+            return
+
+        model_path = os.path.join(self.model_dir, self.filename)
+        if not os.path.exists(model_path):
+            log_message(f"⚠️ Sakura model file not found: {self.filename}")
+            self.is_ready = False
+            return
+
+        try:
+            log_message("🚀 Loading SakuraLLM (CPU Mode)...")
+
+            # 初始化 LLM
+            self.llm = Llama(
+                model_path=model_path, n_ctx=1024, n_threads=4, verbose=False
+            )
+
+            self.is_ready = True
+            log_message("✅ SakuraLLM Engine loaded.")
+        except Exception as e:
+            log_message(f"❌ Failed to load Sakura: {e}")
+            self.is_ready = False
+
+    def translate(self, text):
+        if not self.is_ready or not self.llm:
+            raise Exception("Sakura Engine not ready")
+
+        with self.lock:
+            # Prompt 格式保持不变
+            system_prompt = "你是一个轻小说翻译模型，可以流畅通顺地以日本轻小说的风格将日文翻译成简体中文，并联系上下文正确使用人称代词，不擅自添加原文中没有的代词。"
+
+            prompt = (
+                f"<|im_start|>system\n{system_prompt}<|im_end|>\n"
+                f"<|im_start|>user\n将下面的日文文本翻译成中文：{text}<|im_end|>\n"
+                f"<|im_start|>assistant\n"
+            )
+
+            output = self.llm(
+                prompt,
+                max_tokens=512,
+                stop=["<|im_end|>", "\n\n"],
+                echo=False,
+                temperature=0.1,
+            )
+
+            try:
+                translation = output["choices"][0]["text"].strip()
+                return translation
+            except Exception as e:
+                log_message(f"Sakura output error: {e}")
+                return text
