@@ -14,6 +14,7 @@ interface ImageItem {
 const images = ref<ImageItem[]>([])
 // 当前显示的图片索引
 const currentImageIndex = ref(0)
+const listKey = ref(0)
 
 // 模板引用
 const dropArea = useTemplateRef<HTMLDivElement>('dropArea')
@@ -143,40 +144,40 @@ const removeImage = (index: number) => {
 let sortableInstance: Sortable | null = null
 
 // 监听 images 数组的长度
-watch(() => images.value.length, (newLength) => {
-    // 使用 nextTick 确保 DOM 已经更新
+watch([() => images.value.length, listKey], () => {
     nextTick(() => {
-        if (newLength > 0 && imagesPreviewContainer.value) {
-            // 如果实例不存在，则创建
-            if (!sortableInstance) {
-                sortableInstance = Sortable.create(imagesPreviewContainer.value, {
-                    animation: 150,
-                    // 关键：在拖拽结束时触发
-                    onEnd: (event) => {
-                        const { oldIndex, newIndex } = event
-
-                        // 检查索引是否存在
-                        if (oldIndex === undefined || newIndex === undefined) return
-
-                        // 1. 从数组中移除被拖拽的项
-                        const itemToMove = images.value.splice(oldIndex, 1)[0]
-                        if (itemToMove) { // 添加了安全检查
-                            // 2. 将其添加到新的位置
-                            images.value.splice(newIndex, 0, itemToMove)
-                        }
-
-                        // 拖拽后可能需要更新当前选中的索引
-                        // 如果你拖拽的是当前选中的图片，需要更新 currentImageIndex
-                        if (currentImageIndex.value === oldIndex) {
-                            currentImageIndex.value = newIndex
-                        }
-                    }
-                })
-            }
-        } else if (newLength === 0 && sortableInstance) {
-            // 如果图片被清空，销毁 Sortable 实例
+        // 如果有旧实例，先销毁（防止内存泄漏或绑定在旧 DOM 上）
+        if (sortableInstance) {
             sortableInstance.destroy()
             sortableInstance = null
+        }
+
+        if (images.value.length > 0 && imagesPreviewContainer.value) {
+            sortableInstance = Sortable.create(imagesPreviewContainer.value, {
+                animation: 150,
+                onEnd: (event) => {
+                    const { oldIndex, newIndex } = event
+                    if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
+
+                    // 1. 修改数据
+                    const movingItem = images.value[oldIndex]
+                    if (movingItem) {
+                        images.value.splice(oldIndex, 1)     // 移除
+                        images.value.splice(newIndex, 0, movingItem) // 插入
+                    }
+
+                    // 2. 更新选中索引 (保持高亮跟随)
+                    if (currentImageIndex.value === oldIndex) {
+                        currentImageIndex.value = newIndex
+                    } else if (oldIndex < currentImageIndex.value && newIndex >= currentImageIndex.value) {
+                        currentImageIndex.value -= 1
+                    } else if (oldIndex > currentImageIndex.value && newIndex <= currentImageIndex.value) {
+                        currentImageIndex.value += 1
+                    }
+
+                    listKey.value++
+                }
+            })
         }
     })
 })
@@ -208,6 +209,7 @@ onUnmounted(() => {
     images.value.forEach(img => URL.revokeObjectURL(img.url))
     if (sortableInstance) {
         sortableInstance.destroy()
+        sortableInstance = null
     }
 })
 </script>
@@ -215,8 +217,7 @@ onUnmounted(() => {
 <template>
     <div class="h-full flex gap-3 items-stretch">
         <!-- 左侧缩略图列表 -->
-        <div v-if="images.length > 0" class="flex flex-col gap-2"
-            :style="{ height: containerSize.height + 'px' }">
+        <div v-if="images.length > 0" class="flex flex-col gap-2" :style="{ height: containerSize.height + 'px' }">
             <!-- 这里可能要改一下 滚动条样式 这里待调整 目前没有更好的方法 -->
             <div class="flex gap-2 w-full justify-between">
                 <SelectImageButton @files-selected="addImages">
@@ -224,7 +225,7 @@ onUnmounted(() => {
                 </SelectImageButton>
                 <Button variant="secondary" class="p-2" @btn-click="handleScreenshot">✂️</Button>
             </div>
-            <div ref="imagesPreviewContainer"
+            <div ref="imagesPreviewContainer" :key="listKey"
                 class="gap-2 min-h-0 bg-manga-100 dark:bg-manga-800 p-2 rounded-primary border border-manga-200 dark:border-manga-600 overflow-y-auto">
                 <ImageThumbnail v-for="(image, index) in images" :key="image.id" :image="image" :index="index"
                     :is-active="index === currentImageIndex" @select="selectImage(index)"
