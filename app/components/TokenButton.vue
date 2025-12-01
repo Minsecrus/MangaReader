@@ -8,6 +8,7 @@ interface Prop {
 }
 
 const { word, type = 'other' } = defineProps<Prop>()
+const { showToast } = useToast()
 
 const getTokenClasses = (tokenType: TokenType) => {
     switch (tokenType) {
@@ -25,8 +26,8 @@ const getTokenClasses = (tokenType: TokenType) => {
 }
 
 const handleClick = () => {
-    // 这里未来可以添加一些其他的功能
-    console.log(word)
+    navigator.clipboard.writeText(word)
+    showToast('已复制 📋')
 }
 </script>
 
