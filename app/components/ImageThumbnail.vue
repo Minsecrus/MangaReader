@@ -24,8 +24,8 @@ defineEmits<{
     <div class="relative flex justify-center group cursor-pointer transition-all duration-200" @click="$emit('select')">
         <!-- 缩略图 -->
         <img :src="image.url" :alt="`图片 ${index + 1}`" draggable="false"
-            class="w-20 h-20 object-cover rounded border-2 transition-all select-none"
-            :class="isActive ? 'border-primary' : 'border-manga-300 dark:border-manga-600'" />
+            class="w-20 h-20 object-cover rounded border-3 transition-all select-none"
+            :class="isActive ? 'border-blue-600 dark:border-blue-400' : 'border-manga-300 dark:border-manga-600'" />
 
         <!-- 删除按钮 -->
         <button @click.stop="$emit('delete')"
