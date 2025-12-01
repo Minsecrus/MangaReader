@@ -95,7 +95,7 @@ class BackendService {
         }
 
         // 关键点 1：必须从 response 里解构出 tokens
-        const { id, success, text, tokens, translation, error } = response
+        const { id, success, text, tokens, translation, exists, error } = response
 
         if (id !== undefined && this.pendingRequests.has(id)) {
             const { resolve, reject } = this.pendingRequests.get(id)
@@ -109,8 +109,10 @@ class BackendService {
                 } else if (translation) {
                     // 新增：如果是翻译任务，返回翻译结果对象
                     resolve({ translation: translation })
+                } else if (exists !== undefined) {
+                    resolve({ exists })
                 } else {
-                    resolve(text)
+                    resolve(text || true)
                 }
             } else {
                 reject(new Error(error))
@@ -168,6 +170,19 @@ class BackendService {
     async translate(text) {
         // 超时设长一点，因为第一次要下载模型 (比如 10分钟 = 600000ms)
         return this._sendRequest({ command: 'translate', text: text }, 600000)
+    }
+
+    async checkModel() {
+        return this._sendRequest({ command: 'check_model' }, 10000)
+    }
+
+    async downloadModel() {
+        // 下载 1.2GB 可能很慢，给 30 分钟超时
+        return this._sendRequest({ command: 'download_model' }, 1800000)
+    }
+
+    async deleteModel() {
+        return this._sendRequest({ command: 'delete_model' }, 20000)
     }
 
     stop() {

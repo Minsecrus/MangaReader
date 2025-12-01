@@ -54,6 +54,11 @@ export interface IElectronAPI {
     // 2. 监听快捷键触发
     // 参数是一个回调函数，返回值是一个“清理函数”(用于移除监听)
     onShortcutTriggered: (callback: () => void) => () => void
+
+    checkModel: () => Promise<{ success: boolean; exists?: boolean; error?: string }>
+    downloadModel: () => Promise<{ success: boolean; error?: string }>
+    deleteModel: () => Promise<{ success: boolean; error?: string }>
+    translate: (text: string) => Promise<{ success: boolean; translation?: string; error?: string }>
 }
 
 declare global {

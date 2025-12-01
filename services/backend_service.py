@@ -77,25 +77,52 @@ def main():
                 except Exception as e:
                     send_response({"id": req_id, "success": False, "error": str(e)})
 
-            # -> 未来：翻译任务
+            # --- Translate ---
             elif command == "translate":
                 try:
                     text = request.get("text", "")
 
-                    # 自动下载/加载逻辑
+                    # 1. 检查是否已加载
                     if not translator.is_ready:
-                        log_message("Sakura model not ready. Auto-downloading...")
-                        translator.download_model()
-                        translator.initialize()
+                        # 2. 检查物理文件是否存在
+                        if translator.check_model_exists():
+                            # 存在则加载
+                            translator.initialize()
+                        else:
+                            raise Exception("MODEL_NOT_FOUND")
 
+                    # 3. 执行翻译
                     result = translator.translate(text)
                     send_response(
                         {"id": req_id, "success": True, "translation": result}
                     )
 
                 except Exception as e:
+                    # 捕获错误 (包括上面的 MODEL_NOT_FOUND)
                     log_message(f"Translation Error: {e}")
                     send_response({"id": req_id, "success": False, "error": str(e)})
+
+            # --- Model Management (New) ---
+
+            # 1. 检查模型状态
+            elif command == "check_model":
+                exists = translator.check_model_exists()
+                send_response({"id": req_id, "success": True, "exists": exists})
+
+            # 2. 下载模型
+            elif command == "download_model":
+                try:
+                    translator.download_model()
+                    # 下载完顺便初始化一下，确保可用
+                    translator.initialize()
+                    send_response({"id": req_id, "success": True})
+                except Exception as e:
+                    send_response({"id": req_id, "success": False, "error": str(e)})
+
+            # 3. 删除模型
+            elif command == "delete_model":
+                success = translator.delete_model()
+                send_response({"id": req_id, "success": success})
 
             elif command == "ping":
                 send_response({"success": True, "message": "pong"})

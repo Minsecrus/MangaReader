@@ -7,7 +7,9 @@ const { originalText } = defineProps<Prop>()
 
 const isTranslationLoading = ref(false)
 const translatedText = ref<string | null>(null)
-const showTranslation = ref(true) // ✅ 默认直接展开
+const showTranslation = ref(true)
+const errorType = ref<string | null>(null)
+const { showToast } = useToast()
 
 // 防抖定时器引用
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -17,21 +19,31 @@ const fetchTranslation = async (text: string) => {
     if (!text) return
 
     isTranslationLoading.value = true
+    errorType.value = null
 
     try {
         console.log('发起翻译请求:', text)
 
-        // --- 模拟 API 调用 ---
-        // 这里未来替换为: await window.electronAPI.translate(text)
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        const response = await window.electronAPI.translate(text)
 
-        // 模拟结果
-        translatedText.value = '今天天气真好呢。一边看漫画一边学习日语。'
-        // --------------------
+        if (response.success && response.translation) {
+            translatedText.value = response.translation
+        } else {
+            const errMsg = response.error || '未知错误'
 
+            // 检测特定的错误代码
+            if (errMsg.includes('MODEL_NOT_FOUND')) {
+                translatedText.value = null
+                errorType.value = 'MODEL_MISSING' // 标记为模型丢失
+            } else {
+                // 其他普通错误（如网络问题、内存不足等）依然弹窗提示
+                console.error('翻译失败:', errMsg)
+                showToast(`翻译失败: ${errMsg}`)
+            }
+        }
     } catch (error) {
         console.error('翻译失败:', error)
-        translatedText.value = '翻译失败，请重试'
+        showToast(`翻译失败，请重试 ${error}`)
     } finally {
         isTranslationLoading.value = false
     }
@@ -42,6 +54,7 @@ watch(() => originalText, (newText) => {
     // 1. 如果文本被清空，清空翻译
     if (!newText.trim()) {
         translatedText.value = null
+        errorType.value = null
         isTranslationLoading.value = false
         if (debounceTimer) clearTimeout(debounceTimer)
         return
@@ -49,7 +62,7 @@ watch(() => originalText, (newText) => {
 
     // 2. 只要文本变了，立即显示“翻译中”状态，给用户反馈
     isTranslationLoading.value = true
-
+    errorType.value = null
     // 3. 清除上一次的定时器 (防抖核心)
     if (debounceTimer) {
         clearTimeout(debounceTimer)
@@ -103,6 +116,18 @@ onUnmounted(() => {
                     class="flex items-center gap-2 text-manga-600 dark:text-manga-400 min-h-6">
                     <div class="animate-spin h-4 w-4 border-2 rounded-full border-primary border-t-transparent"></div>
                     <span class="text-sm">翻译中...</span>
+                </div>
+
+                <!-- 模型缺失提示 (纯文字提示) -->
+                <div v-else-if="errorType === 'MODEL_MISSING'"
+                    class="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-800">
+                    <div class="flex items-center gap-2 mb-1">
+                        <IconWarn class="size-4" />
+                        <span class="font-bold">模型未就绪</span>
+                    </div>
+                    <p class="text-xs opacity-90 pl-6">
+                        请前往 <span class="font-bold underline">设置 > 翻译模型</span> 下载并安装模型。
+                    </p>
                 </div>
 
                 <!-- 翻译结果 -->

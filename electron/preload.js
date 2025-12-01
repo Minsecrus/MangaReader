@@ -48,5 +48,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('ocr:shortcut-triggered', handler)
         // 返回一个清理函数，方便在组件卸载时移除监听
         return () => ipcRenderer.removeListener('ocr:shortcut-triggered', handler)
-    }
+    },
+    // 模型API管理
+    checkModel: () => ipcRenderer.invoke('model:check'),
+    downloadModel: () => ipcRenderer.invoke('model:download'),
+    deleteModel: () => ipcRenderer.invoke('model:delete')
 })

@@ -4,6 +4,7 @@ import threading
 from .base import BaseTranslator
 from huggingface_hub import hf_hub_download
 from ..utils import log_message
+import shutil
 
 try:
     from llama_cpp import Llama
@@ -21,23 +22,62 @@ class SakuraEngine(BaseTranslator):
 
         # ✅ 文件名: 修正为真实存在的 Q5KS 版本 (1.26 GB)
         self.filename = "sakura-1.5b-qwen2.5-v1.0-Q5KS.gguf"
+        self.model_file_path = os.path.join(self.model_dir, self.filename)
 
         self.llm = None
         self.lock = threading.Lock()
 
-    def download_model(self, progress_callback=None):
-        log_message(f"⬇️ Downloading SakuraLLM (1.5B) to {self.model_dir}...")
-        log_message(f"   Repo: {self.repo_id}")
-        log_message(f"   Target: {self.filename} (~1.26GB)")
+    def check_model_exists(self):
+        path = self.model_file_path
+        exists = os.path.exists(path)
 
+        log_message(f"🔍 [Check] Path: {path}")
+        log_message(f"🔍 [Check] Exists: {exists}")
+
+        return exists
+
+    def delete_model(self):
+        # 1. 尝试释放内存
+        if self.llm:
+            log_message("🔄 Unloading model from memory...")
+            try:
+                del self.llm
+                self.llm = None
+                self.is_ready = False
+            except:
+                pass
+
+        # 2. 删除 .gguf 主模型文件
+        deleted_main = False
+        if os.path.exists(self.model_file_path):
+            try:
+                os.remove(self.model_file_path)
+                log_message(f"🗑️ Deleted main file: {self.filename}")
+                deleted_main = True
+            except Exception as e:
+                log_message(f"❌ Failed to delete main file: {e}")
+
+        # 3. 彻底清理 .cache 文件夹 (元数据残留)
+        # self.model_dir 就是 .../models/translation/sakura
+        cache_dir = os.path.join(self.model_dir, ".cache")
+        if os.path.exists(cache_dir):
+            try:
+                shutil.rmtree(cache_dir)  # 递归删除文件夹
+                log_message("🧹 Cleaned up HuggingFace cache directory.")
+            except Exception as e:
+                log_message(f"⚠️ Failed to clean cache: {e}")
+
+        return deleted_main
+
+    def download_model(self, progress_callback=None):
+        log_message(f"⬇️ Downloading SakuraLLM to: {self.model_dir}")
+        log_message(f"   File: {self.filename}")
         try:
-            # ✅ 修正：移除过时参数，消除警告
-            # 新版 hf_hub_download 默认就是断点续传 + 下载实体文件
-            file_path = hf_hub_download(
+            hf_hub_download(
                 repo_id=self.repo_id,
                 filename=self.filename,
                 local_dir=self.model_dir,
-                token=False,  # 匿名下载
+                token=False,
             )
             log_message("✅ SakuraLLM download complete.")
             return True
@@ -51,16 +91,16 @@ class SakuraEngine(BaseTranslator):
             self.is_ready = False
             return
 
-        model_path = os.path.join(self.model_dir, self.filename)
+        model_path = self.model_file_path
+
         if not os.path.exists(model_path):
-            log_message(f"⚠️ Sakura model file not found: {self.filename}")
+            log_message(f"⚠️ Initialize failed. Model not found at: {model_path}")
             self.is_ready = False
             return
 
         try:
-            log_message("🚀 Loading SakuraLLM (CPU Mode)...")
+            log_message(f"🚀 Loading SakuraLLM (CPU Mode) from: {model_path}")
 
-            # 初始化 LLM
             self.llm = Llama(
                 model_path=model_path, n_ctx=1024, n_threads=4, verbose=False
             )

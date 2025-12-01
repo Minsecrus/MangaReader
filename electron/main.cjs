@@ -227,6 +227,39 @@ ipcMain.handle('ocr:translate', async (event, text) => {
     }
 })
 
+// 检查模型状态
+ipcMain.handle('model:check', async () => {
+    try {
+        if (!backendService) return { success: false, error: "Service not ready" }
+        const result = await backendService.checkModel()
+        return { success: true, exists: result.exists }
+    } catch (e) {
+        return { success: false, error: e.message }
+    }
+})
+
+// 下载模型
+ipcMain.handle('model:download', async () => {
+    try {
+        if (!backendService) return { success: false, error: "Service not ready" }
+        await backendService.downloadModel()
+        return { success: true }
+    } catch (e) {
+        return { success: false, error: e.message }
+    }
+})
+
+// 删除模型
+ipcMain.handle('model:delete', async () => {
+    try {
+        if (!backendService) return { success: false, error: "Service not ready" }
+        await backendService.deleteModel()
+        return { success: true }
+    } catch (e) {
+        return { success: false, error: e.message }
+    }
+})
+
 // 窗口控制 IPC 监听器 监听渲染进程发送的事件
 ipcMain.on('window:minimize', () => {
     if (mainWindow) {
