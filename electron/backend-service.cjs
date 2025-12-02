@@ -97,6 +97,12 @@ class BackendService extends EventEmitter {
             return
         }
 
+        if (response.type === 'download_progress') {
+            // 向外发射 'download-progress' 事件
+            this.emit('download-progress', response.percent)
+            return
+        }
+
         const { id, success, text, tokens, translation, exists, error } = response
 
         if (id !== undefined && this.pendingRequests.has(id)) {

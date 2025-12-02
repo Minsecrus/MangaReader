@@ -319,6 +319,12 @@ app.whenReady().then(async () => {
                 mainWindow.webContents.send('backend-status', { status: 'ready' })
             }
         })
+        backendService.on('download-progress', (percent) => {
+            // console.log(`Downloading: ${percent}%`) // 可选：在终端显示
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('model:download-progress', percent)
+            }
+        })
         backendService.start()
 
         // 监听打开外部链接的请求

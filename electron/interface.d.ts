@@ -62,6 +62,8 @@ export interface IElectronAPI {
 
     // 后端状态检查
     checkBackendReady: () => Promise<boolean>
+
+    onDownloadProgress: (callback: (percent: number) => void) => () => void
 }
 
 declare global {

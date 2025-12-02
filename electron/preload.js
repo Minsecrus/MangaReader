@@ -55,4 +55,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteModel: () => ipcRenderer.invoke('model:delete'),
     // 检查后端状态
     checkBackendReady: () => ipcRenderer.invoke('backend:check-ready'),
+    // 下载进度
+    onDownloadProgress: (callback) => {
+        const handler = (_event, percent) => callback(percent)
+        ipcRenderer.on('model:download-progress', handler)
+        // 返回清理函数
+        return () => ipcRenderer.removeListener('model:download-progress', handler)
+    },
 })

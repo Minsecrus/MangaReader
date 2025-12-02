@@ -12,14 +12,11 @@ const handleDownload = async () => {
     model.status = 'downloading'
     model.progress = 0
 
-    // 假进度条
-    const timer = setInterval(() => {
-        if (model.progress < 95) model.progress += (Math.random() * 3)
-    }, 800)
-
     try {
+        // 发起下载请求
         const res = await window.electronAPI.downloadModel()
-        clearInterval(timer)
+
+        // 下载完成后 (Python 那边函数返回了)
         if (res.success) {
             model.progress = 100
             model.status = 'downloaded'
@@ -28,7 +25,6 @@ const handleDownload = async () => {
             model.status = 'not_downloaded'
         }
     } catch (e) {
-        clearInterval(timer)
         model.status = 'not_downloaded'
         showToast('下载出错')
     }
@@ -59,6 +55,22 @@ const confirmDelete = async () => {
 // 组件挂载时检查状态
 onMounted(() => {
     checkModelStatus()
+    // 保存清理函数，组件销毁时取消监听
+    const cleanup = window.electronAPI.onDownloadProgress((percent: number) => {
+        // 只有当前状态是 downloading 时才更新，防止干扰
+        if (model.status === 'downloading') {
+            model.progress = percent
+
+            // 如果下载完了，自动变状态
+            if (percent >= 100) {
+                model.status = 'downloaded'
+            }
+        }
+    })
+
+    onUnmounted(() => {
+        cleanup()
+    })
 })
 </script>
 
