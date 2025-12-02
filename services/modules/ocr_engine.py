@@ -1,11 +1,53 @@
 # services/modules/ocr_engine.py
 import os
 import base64
+import sys
+import json
+import contextlib
 from io import BytesIO
 from PIL import Image
 from manga_ocr import MangaOcr
 from huggingface_hub import snapshot_download
 from .utils import log_message
+
+# ✅ 引入 tqdm
+import tqdm
+
+# ✅ Monkey Patch tqdm (复用 sakura_engine 的逻辑，或者提取到 utils)
+# 这里为了独立性，我们简单实现一个针对 OCR 的 patch
+_original_init = tqdm.tqdm.__init__
+_original_update = tqdm.tqdm.update
+
+def _patched_init(self, *args, **kwargs):
+    kwargs["disable"] = False
+    kwargs["file"] = open(os.devnull, "w")
+    _original_init(self, *args, **kwargs)
+    self.last_percent = -1
+
+def _patched_update(self, n=1):
+    _original_update(self, n)
+    if self.total and self.total > 0:
+        percent = (self.n / self.total) * 100
+        if int(percent * 2) > getattr(self, 'last_percent', -1):
+            self.last_percent = int(percent * 2)
+            # 注意：这里 type 是 init_progress，专门用于启动时的加载器
+            msg = {
+                "type": "init_progress",
+                "percent": round(percent, 1),
+                "message": "正在下载 OCR 核心组件..."
+            }
+            sys.stdout.write(json.dumps(msg) + "\n")
+            sys.stdout.flush()
+
+@contextlib.contextmanager
+def patch_tqdm():
+    tqdm.tqdm.__init__ = _patched_init
+    tqdm.tqdm.update = _patched_update
+    try:
+        yield
+    finally:
+        tqdm.tqdm.__init__ = _original_init
+        tqdm.tqdm.update = _original_update
 
 
 class OCREngine:
@@ -63,13 +105,13 @@ class OCREngine:
             log_message("⏳ This may take a while (approx 400MB)...")
 
             try:
-                # 使用 snapshot_download 直接下载到指定文件夹
-                # 这会避免使用系统缓存，直接把文件放进 App 的 models/ocr 目录
-                snapshot_download(
-                    repo_id="kha-white/manga-ocr-base",
-                    local_dir=self.model_dir,
-                    local_dir_use_symlinks=False,  # 关键：不使用软链接，确保是真实文件
-                )
+                # ✅ 使用 patch_tqdm 捕获下载进度
+                with patch_tqdm():
+                    snapshot_download(
+                        repo_id="kha-white/manga-ocr-base",
+                        local_dir=self.model_dir,
+                        local_dir_use_symlinks=False,  # 关键：不使用软链接，确保是真实文件
+                    )
                 log_message("✅ Download complete!")
             except Exception as e:
                 log_message(f"❌ Download failed: {e}")

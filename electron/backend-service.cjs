@@ -103,6 +103,17 @@ class BackendService extends EventEmitter {
             return
         }
 
+        // ✅ 新增：处理初始化阶段的下载进度
+        if (response.type === 'init_progress') {
+            this.emit('init-progress', response)
+            return
+        }
+
+        if (response.type === 'init_status') {
+            this.emit('init-status', response.message)
+            return
+        }
+
         const { id, success, text, tokens, translation, exists, error } = response
 
         if (id !== undefined && this.pendingRequests.has(id)) {

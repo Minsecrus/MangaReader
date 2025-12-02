@@ -21,6 +21,9 @@ from modules.translator import get_translator_engine
 def main():
     log_message("Starting Backend Service...")
 
+    # 发送状态 启动中
+    send_response({"type": "init_status", "message": "正在启动后台服务..."})
+
     # 1. 解析参数
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-dir", type=str, help="Path to OCR model")
@@ -32,19 +35,29 @@ def main():
     if not os.path.exists(translation_root):
         os.makedirs(translation_root, exist_ok=True)
 
-    # 2. 初始化各模块
-    # 注意：如果模块加载很慢，这会阻塞启动。目前逻辑是启动时加载。
-    # 如果未来想秒开，可以把初始化放在第一次调用时 (Lazy Load)。
+    # 初始化OCR
+    send_response(
+        {
+            "type": "init_status",
+            "message": "正在加载 OCR 引擎 (首次运行可能需要下载模型)...",
+        }
+    )
     ocr_engine = OCREngine(model_dir=args.model_dir)
+
+    # 初始化分词器
+    send_response({"type": "init_status", "message": "正在加载日语分词组件..."})
     tokenizer = JapaneseTokenizer()
 
+    # 初始化翻译模块
+    send_response({"type": "init_status", "message": "正在配置翻译模块..."})
     log_message(f"Init Translator (Sakura) root: {translation_root}")
     # 强制指定使用 sakura
     translator = get_translator_engine("sakura", translation_root)
     # 尝试加载 (如果没下载，这里会失败，但在 translate 命令里会触发下载)
     translator.initialize()
 
-    # 3. 告诉 Electron 我们准备好了
+    # 准备就绪
+    send_response({"type": "init_status", "message": "资源加载完毕，即将进入..."})
     send_response({"status": "ready"})
     log_message("Waiting for commands...")
 

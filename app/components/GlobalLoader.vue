@@ -3,6 +3,8 @@
 const { showToast } = useToast()
 const isVisible = ref(true)
 const isFading = ref(false) // 控制消失动画
+const loadingText = ref('Initializing...')
+const downloadPercent = ref(0) // 下载进度
 
 const emit = defineEmits<{
     ready: []
@@ -16,9 +18,19 @@ onMounted(async () => {
             finishLoading()
         }
     })
+    window.electronAPI.onInitStatus((message: string) => {
+        loadingText.value = message
+    })
+
+    // ✅ 监听初始化下载进度
+    window.electronAPI.onInitProgress((data: { percent: number, message: string }) => {
+        loadingText.value = `${data.message} (${data.percent}%)`
+        downloadPercent.value = data.percent
+    })
+
     const isReady = await window.electronAPI.checkBackendReady()
     if (isReady) {
-        console.log('Loader: Backend is already ready (Refreshed?)')
+        loadingText.value = "Welcome Back!"
         finishLoading()
     }
     // 超时强制显示 防止后端挂了
@@ -27,7 +39,7 @@ onMounted(async () => {
             console.warn('Loader: Timeout triggered (Backend slow or failed)')
             finishLoading()
         }
-    }, 15000)
+    }, 300000)
 })
 
 const finishLoading = () => {
@@ -59,13 +71,20 @@ const finishLoading = () => {
                 </div>
 
                 <!-- 文字提示 -->
-                <div class="text-center space-y-2">
+                <div class="text-center space-y-2 w-full max-w-md px-4">
                     <h2 class="text-xl font-bold text-manga-900 dark:text-white tracking-widest animate-pulse">
                         MANGA READER
                     </h2>
-                    <p class="text-sm text-manga-500 dark:text-manga-400 font-mono">
-                        Initializing Core Services...
+                    <p class="text-sm text-manga-500 dark:text-manga-400 font-mono truncate">
+                        {{ loadingText }}
                     </p>
+
+                    <!-- 进度条 (仅在下载时显示) -->
+                    <div v-if="downloadPercent > 0 && downloadPercent < 100"
+                        class="w-full h-1.5 bg-manga-200 dark:bg-manga-700 rounded-full overflow-hidden mt-2">
+                        <div class="h-full bg-primary transition-all duration-300 ease-out"
+                            :style="{ width: `${downloadPercent}%` }"></div>
+                    </div>
                 </div>
             </div>
         </Transition>

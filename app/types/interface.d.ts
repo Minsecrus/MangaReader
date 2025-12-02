@@ -64,6 +64,8 @@ export interface IElectronAPI {
     checkBackendReady: () => Promise<boolean>
 
     onDownloadProgress: (callback: (percent: number) => void) => () => void
+    onInitStatus: (callback: (msg: string) => void) => () => void
+    onInitProgress: (callback: (data: { percent: number, message: string }) => void) => () => void
 }
 
 declare global {

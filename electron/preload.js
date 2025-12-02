@@ -62,4 +62,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
         // 返回清理函数
         return () => ipcRenderer.removeListener('model:download-progress', handler)
     },
+    onInitStatus: (callback) => {
+        const handler = (_event, message) => callback(message)
+        ipcRenderer.on('init-status', handler)
+        return () => ipcRenderer.removeListener('init-status', handler)
+    },
+    // ✅ 新增：监听初始化进度
+    onInitProgress: (callback) => {
+        const handler = (_event, data) => callback(data)
+        ipcRenderer.on('init-progress', handler)
+        return () => ipcRenderer.removeListener('init-progress', handler)
+    },
 })

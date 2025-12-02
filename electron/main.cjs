@@ -320,6 +320,21 @@ app.whenReady().then(async () => {
                 mainWindow.webContents.send('backend-status', { status: 'ready' })
             }
         })
+
+        // 监听初始化文字状态
+        backendService.on('init-status', (message) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('init-status', message)
+            }
+        })
+
+        // ✅ 新增：监听初始化进度
+        backendService.on('init-progress', (data) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('init-progress', data)
+            }
+        })
+
         backendService.on('download-progress', (percent) => {
             // console.log(`Downloading: ${percent}%`) // 可选：在终端显示
             if (mainWindow && !mainWindow.isDestroyed()) {
