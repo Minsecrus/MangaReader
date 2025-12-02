@@ -23,7 +23,7 @@ function getModelsPath() {
         : path.join(process.resourcesPath, 'models')
 }
 
-// ✅ 初始化 Electron Store (处理 ESM 导入)
+//  初始化 Electron Store (处理 ESM 导入)
 async function initStore() {
     const { default: Store } = await import('electron-store')
 
@@ -70,7 +70,7 @@ function createMainWindow() {
         mainWindow = null
     })
 
-    // ✅ 新增：监听窗口最大化/还原事件，并发送给前端
+    // 监听窗口最大化/还原事件，并发送给前端
     mainWindow.on('maximize', () => {
         mainWindow.webContents.send('window:state-change', 'maximized')
     })
@@ -162,7 +162,7 @@ ipcMain.on('window:capture-close', () => {
     mainWindow.show()
 })
 
-// ✅ 新增：打开模型文件夹
+//  打开模型文件夹
 ipcMain.on('open-model-folder', () => {
     const modelsRoot = getModelsPath()
     // 打开 models 根目录，让用户看到 ocr/translation 等子文件夹
@@ -205,7 +205,7 @@ ipcMain.handle('ocr:tokenize', async (event, text) => {
         if (!backendService) return { success: false, error: "Service not ready" }
         // 调用 Service
         const result = await backendService.tokenize(text)
-        console.log('Tokenize result:', result)
+        console.log(`Tokenize result: ${result?.tokens?.length || 0} tokens found`)
         if (!result) {
             throw new Error('Service returned empty result')
         }
@@ -288,7 +288,7 @@ app.whenReady().then(async () => {
     try {
         // 1. 先等待 store 初始化完成
         await initStore()
-        console.log('✅ Electron Store initialized')
+        console.log('[INFO] Electron Store initialized')
 
         // 2. 注册 Settings 相关的 IPC
         // 获取所有设置
@@ -315,7 +315,7 @@ app.whenReady().then(async () => {
         // 启动 OCR 服务
         backendService = new BackendService(ocrModelPath)
         backendService.on('ready', () => {
-            console.log('⚡️ Signal: Backend ready, notifying frontend...')
+            console.log('Signal: Backend ready, notifying frontend...')
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('backend-status', { status: 'ready' })
             }
@@ -328,7 +328,7 @@ app.whenReady().then(async () => {
             }
         })
 
-        // ✅ 新增：监听初始化进度
+        //  监听初始化进度
         backendService.on('init-progress', (data) => {
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('init-progress', data)
@@ -362,7 +362,7 @@ app.whenReady().then(async () => {
 
             // 2. 如果传空值，说明用户想清除快捷键
             if (!shortcut || shortcut.trim() === '') {
-                console.log('🧹 快捷键已清除')
+                console.log('[INFO] 快捷键已清除')
                 return true
             }
 
@@ -372,7 +372,7 @@ app.whenReady().then(async () => {
             try {
                 // 4. 向操作系统注册新快捷键
                 const ret = globalShortcut.register(accelerator, () => {
-                    console.log('⚡️ 快捷键被触发:', accelerator)
+                    console.log('[INFO] 快捷键被触发:', accelerator)
 
                     if (mainWindow) {
                         if (mainWindow.isMinimized()) mainWindow.restore()
@@ -383,11 +383,11 @@ app.whenReady().then(async () => {
                 })
 
                 if (!ret) {
-                    console.log('❌ 快捷键注册失败 (可能被占用):', accelerator)
+                    console.log('[ERROR] 快捷键注册失败 (可能被占用):', accelerator)
                     return false
                 }
 
-                console.log('✅ 快捷键注册成功:', accelerator)
+                console.log('[INFO] 快捷键注册成功:', accelerator)
                 return true
             } catch (error) {
                 console.error('快捷键注册异常:', error)

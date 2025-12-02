@@ -83,7 +83,7 @@ watch(() => originalText, (newText) => {
         fetchTranslation(newText)
     }, 800) // 800ms 延迟，既不显得太卡，又能有效防止频繁请求
 
-}, { immediate: true }) // ✅ immediate: true 保证组件一加载如果有字也翻译
+}, { immediate: true }) //  immediate: true 保证组件一加载如果有字也翻译
 
 // 手动重新翻译 (不走防抖，立即触发)
 const handleRetranslate = async () => {

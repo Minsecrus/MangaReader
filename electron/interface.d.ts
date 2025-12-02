@@ -44,10 +44,8 @@ export interface IElectronAPI {
     saveSetting: (key: string, value: any) => void
     openConfigFile: () => void
 
-    // 其他
     openLink: (url: string) => Promise<void>
 
-    // ✅ 新增：全局快捷键 API
     // 1. 设置快捷键 (返回 boolean 表示是否成功)
     setGlobalShortcut: (shortcut: string) => Promise<boolean>
 

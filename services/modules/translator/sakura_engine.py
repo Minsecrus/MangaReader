@@ -95,14 +95,14 @@ class SakuraEngine(BaseTranslator):
         # 但 os.path.exists 会自动追踪 symlink，所以逻辑是通用的
         path = self.model_file_path
         exists = os.path.exists(path)
-        log_message(f"🔍 [Check] Path: {path}")
-        log_message(f"🔍 [Check] Exists: {exists}")
+        log_message(f"[INFO] [Check] Path: {path}")
+        log_message(f"[INFO] [Check] Exists: {exists}")
         return exists
 
     def delete_model(self):
         # 1. 释放内存
         if self.llm:
-            log_message("🔄 Unloading model...")
+            log_message("[INFO] Unloading model...")
             try:
                 del self.llm
                 self.llm = None
@@ -116,31 +116,31 @@ class SakuraEngine(BaseTranslator):
         if os.path.exists(self.model_file_path):
             try:
                 os.remove(self.model_file_path)
-                log_message(f"🗑️ Deleted model link/file: {self.filename}")
+                log_message(f"[INFO] Deleted model link/file: {self.filename}")
                 deleted = True
             except Exception as e:
-                log_message(f"❌ Failed to delete model file: {e}")
+                log_message(f"[ERROR] Failed to delete model file: {e}")
 
-        # 3. ✅ 关键：清理 .cache 缓存
+        # 3.  关键：清理 .cache 缓存
         # HuggingFace 的默认缓存结构通常在 models/translation/sakura/.cache
         # 我们把它整个干掉，这样才是真的“卸载”
         cache_dir = os.path.join(self.model_dir, ".cache")
         if os.path.exists(cache_dir):
             try:
                 shutil.rmtree(cache_dir)
-                log_message("🧹 Cleaned up HuggingFace cache directory.")
+                log_message("[INFO] Cleaned up HuggingFace cache directory.")
                 deleted = True
             except Exception as e:
-                log_message(f"⚠️ Failed to clean cache: {e}")
+                log_message(f"[WARN] Failed to clean cache: {e}")
 
         return deleted
 
     def download_model(self, progress_callback=None):
-        log_message(f"⬇️ Downloading SakuraLLM via HuggingFace Hub...")
+        log_message(f"[INFO] Downloading SakuraLLM via HuggingFace Hub...")
         log_message(f"   Repo: {self.repo_id}")
 
         try:
-            # ✅ 使用上下文管理器，只在下载期间开启“间谍模式”
+            #  使用上下文管理器，只在下载期间开启“间谍模式”
             with patch_tqdm():
                 file_path = hf_hub_download(
                     repo_id=self.repo_id,
@@ -151,36 +151,36 @@ class SakuraEngine(BaseTranslator):
                     token=False,
                 )
 
-            log_message("✅ SakuraLLM download complete.")
+            log_message("[INFO] SakuraLLM download complete.")
             return True
         except Exception as e:
-            log_message(f"❌ Download failed: {e}")
+            log_message(f"[ERROR] Download failed: {e}")
             raise e
 
     def initialize(self):
         if Llama is None:
-            log_message("❌ Error: llama-cpp-python not installed.")
+            log_message("[ERROR] Error: llama-cpp-python not installed.")
             self.is_ready = False
             return
 
         model_path = self.model_file_path
 
         if not os.path.exists(model_path):
-            log_message(f"⚠️ Initialize failed. Model not found at: {model_path}")
+            log_message(f"[WARN] Initialize failed. Model not found at: {model_path}")
             self.is_ready = False
             return
 
         try:
-            log_message(f"🚀 Loading SakuraLLM (CPU Mode) from: {model_path}")
+            log_message(f"[INFO] Loading SakuraLLM (CPU Mode) from: {model_path}")
 
             self.llm = Llama(
                 model_path=model_path, n_ctx=1024, n_threads=4, verbose=False
             )
 
             self.is_ready = True
-            log_message("✅ SakuraLLM Engine loaded.")
+            log_message("[INFO] SakuraLLM Engine loaded.")
         except Exception as e:
-            log_message(f"❌ Failed to load Sakura: {e}")
+            log_message(f"[ERROR] Failed to load Sakura: {e}")
             self.is_ready = False
 
     def translate(self, text):

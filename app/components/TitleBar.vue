@@ -17,7 +17,7 @@ const emit = defineEmits<{
 
 
 const isDark = ref(false) // dark light mode
-const isMaximized = ref(false) // 新增：窗口状态
+const isMaximized = ref(false) // 窗口状态
 const toggleDark = () => {
     isDark.value = !isDark.value
     document.documentElement.classList.toggle('dark')
@@ -29,7 +29,7 @@ onMounted(() => {
         document.documentElement.classList.add('dark')
     }
 
-    // ✅ 监听 Electron 发来的窗口状态变化
+    //  监听 Electron 发来的窗口状态变化
     window.electronAPI.onWindowStateChange((state: string) => {
         isMaximized.value = state === 'maximized'
     })

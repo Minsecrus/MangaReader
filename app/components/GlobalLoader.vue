@@ -22,7 +22,7 @@ onMounted(async () => {
         loadingText.value = message
     })
 
-    // ✅ 监听初始化下载进度
+    // 监听初始化下载进度
     window.electronAPI.onInitProgress((data: { percent: number, message: string }) => {
         loadingText.value = `${data.message} (${data.percent}%)`
         downloadPercent.value = data.percent

@@ -37,8 +37,8 @@ class BackendService extends EventEmitter {
             args.push('--model-dir', this.modelPath)
         }
 
-        console.log('🚀 Starting OCR service...')
-        console.log('📂 Model Path:', this.modelPath)
+        console.log('[INFO] Starting OCR service...')
+        console.log('[INFO] Model Path:', this.modelPath)
 
         this.process = spawn(pythonPath, args, {
             stdio: ['pipe', 'pipe', 'pipe'],
@@ -92,7 +92,7 @@ class BackendService extends EventEmitter {
     _handleResponse(response) {
         if (response.status === 'ready') {
             this.isReady = true
-            console.log('✅ OCR Service is Ready!')
+            console.log('OCR Service is Ready!')
             this.emit('ready')
             return
         }
@@ -103,7 +103,7 @@ class BackendService extends EventEmitter {
             return
         }
 
-        // ✅ 新增：处理初始化阶段的下载进度
+        //  处理初始化阶段的下载进度
         if (response.type === 'init_progress') {
             this.emit('init-progress', response)
             return

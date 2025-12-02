@@ -26,9 +26,9 @@ class JapaneseTokenizer:
         try:
             log_message("Initializing Sudachi Tokenizer...")
             self.tokenizer = dictionary.Dictionary(dict="core").create()
-            log_message("✅ Tokenizer Initialized.")
+            log_message(" Tokenizer Initialized.")
         except Exception as e:
-            log_message(f"❌ Tokenizer Init Failed: {e}")
+            log_message(f"[ERROR] Tokenizer Init Failed: {e}")
             self.tokenizer = None
             self.init_error = str(e)
 
