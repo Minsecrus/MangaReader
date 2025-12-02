@@ -46,6 +46,7 @@ function createMainWindow() {
         width: 1200,
         height: 800,
         frame: false, // 禁用默认边框
+        icon: path.join(__dirname, '../public/MangaReaderLogo.ico'),
         webPreferences: {
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js')
