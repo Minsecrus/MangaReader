@@ -33,7 +33,7 @@ export const useSettings = () => {
     }
 
     if (import.meta.client) {
-        // ✅ 监听 settings 变化，自动同步到 Electron Store
+        // 监听 settings 变化，自动同步到 Electron Store
         watch(settings, (newVal) => {
             applyTheme()
             // 遍历保存每一个 key
@@ -42,15 +42,10 @@ export const useSettings = () => {
                 window.electronAPI?.saveSetting(key, value)
             }
 
-            // ✅ 新增：如果快捷键变了，立刻通知 Electron 注册
-            // (虽然 initSettings 里注册过，但用户修改时需要实时生效)
-            if (newVal.ocrShortcut) {
-                window.electronAPI?.setGlobalShortcut(newVal.ocrShortcut)
-            }
+            window.electronAPI.setGlobalShortcut(newVal.ocrShortcut)
 
         }, { deep: true })
 
-        // 系统主题监听保持不变
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
         mediaQuery.addEventListener('change', () => {
             if (settings.value.theme === 'system') applyTheme()
@@ -66,17 +61,10 @@ export const useSettings = () => {
 
     // 保存设置 (持久化到 localStorage 或 electron-store)
     const saveSettings = () => {
-        // 其实因为上面有 watch 自动保存，这个函数甚至可以是空的
-        // 或者保留用来做一些“手动触发保存”的提示逻辑
         console.log('设置已通过 Watch 自动保存')
-
-        // 这一步也是多余的，因为 watch 里已经调用了，但留着双重保险也行
-        if (window.electronAPI && settings.value.ocrShortcut) {
-            window.electronAPI.setGlobalShortcut(settings.value.ocrShortcut)
-        }
     }
 
-    // ✅ 初始化：从 Electron 读取配置
+    // 初始化：从 Electron 读取配置
     const initSettings = async () => {
         if (import.meta.client) {
             try {
@@ -85,9 +73,7 @@ export const useSettings = () => {
                 Object.assign(settings.value, storedSettings)
                 // 初始化完成后立即应用一次主题
                 applyTheme()
-                if (settings.value.ocrShortcut) {
-                    window.electronAPI.setGlobalShortcut(settings.value.ocrShortcut)
-                }
+                window.electronAPI.setGlobalShortcut(settings.value.ocrShortcut)
                 console.log('⚙️ Settings loaded from Electron Store')
             } catch (e) {
                 console.error('Failed to load settings:', e)

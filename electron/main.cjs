@@ -323,32 +323,29 @@ app.whenReady().then(async () => {
             }
         })
 
-        // ✅ 新增：注册全局快捷键的监听
+        // 快捷键设置
         ipcMain.handle('settings:set-shortcut', (event, shortcut) => {
-            // 1. 先清除旧的，防止重复
+            // 1. 无论如何，先清除所有旧的快捷键，防止冲突或残留
             globalShortcut.unregisterAll()
 
-            // 如果传空值，说明是清除快捷键
-            if (!shortcut) return true
+            // 2. 如果传空值，说明用户想清除快捷键
+            if (!shortcut || shortcut.trim() === '') {
+                console.log('🧹 快捷键已清除')
+                return true
+            }
 
-            // 2. 格式转换：前端录制的是 "Ctrl + Shift + A" (带空格)
-            // Electron 需要 "Ctrl+Shift+A" (无空格)
-            // Mac 下通常用 CommandOrControl 代替 Ctrl，这里简单去空格即可兼容大部分情况
+            // 3. 格式转换：前端录制的是 "Ctrl + Shift + A" (带空格) -> Electron 需要 "Ctrl+Shift+A"
             const accelerator = shortcut.replace(/\s+/g, '')
 
             try {
-                // 3. 向操作系统注册
+                // 4. 向操作系统注册新快捷键
                 const ret = globalShortcut.register(accelerator, () => {
                     console.log('⚡️ 快捷键被触发:', accelerator)
 
-                    // 4. 快捷键按下后的行为：
-                    //    a. 确保主窗口显示并聚焦 (如果最小化了就弹出来)
                     if (mainWindow) {
                         if (mainWindow.isMinimized()) mainWindow.restore()
                         mainWindow.show()
                         mainWindow.focus()
-
-                        // b. 通知前端 (Vue) 开启 OCR 模式
                         mainWindow.webContents.send('ocr:shortcut-triggered')
                     }
                 })
@@ -357,6 +354,8 @@ app.whenReady().then(async () => {
                     console.log('❌ 快捷键注册失败 (可能被占用):', accelerator)
                     return false
                 }
+
+                console.log('✅ 快捷键注册成功:', accelerator)
                 return true
             } catch (error) {
                 console.error('快捷键注册异常:', error)

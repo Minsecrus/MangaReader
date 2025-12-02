@@ -35,6 +35,10 @@ const handleKeyDown = (e: KeyboardEvent) => {
     }
     if (e.key === 'Backspace') {
         settings.value.ocrShortcut = ''
+        // 清空后立即保存并退出录制，体验更流畅
+        saveSettings()
+        stopRecording()
+        showToast('快捷键已清除', 1500)
         return
     }
 
@@ -139,8 +143,9 @@ const handleKeyDown = (e: KeyboardEvent) => {
                     <span class="text-xl mb-1">
                         {{ mode === 'light' ? '☀️' : mode === 'dark' ? '🌙' : '💻' }}
                     </span>
-                    <span class="text-xs font-medium">{{ mode === 'light' ? '浅色' : mode === 'dark' ? '深色' : '跟随系统'
-                    }}</span>
+                    <span class="text-xs font-medium">
+                        {{ mode === 'light' ? '浅色' : mode === 'dark' ? '深色' : '跟随系统' }}
+                    </span>
                 </button>
             </div>
         </div>
