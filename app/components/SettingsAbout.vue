@@ -32,10 +32,8 @@ const openLink = (url: string) => {
         <!-- App 头部 -->
         <div class="space-y-3">
             <div
-                class="w-16 h-16 mx-auto bg-linear-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <span class="text-3xl">
-                    📖
-                </span>
+                class="w-16 h-16 mx-auto bg-linear-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 overflow-hidden">
+                <img src="/MangaReaderLogo.png" alt="logo" class="w-full h-full object-cover">
             </div>
             <div>
                 <h2 class="text-xl font-bold text-manga-900 dark:text-white">{{ config.appName }}</h2>
