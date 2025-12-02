@@ -313,6 +313,12 @@ app.whenReady().then(async () => {
 
         // 启动 OCR 服务
         backendService = new BackendService(ocrModelPath)
+        backendService.on('ready', () => {
+            console.log('⚡️ Signal: Backend ready, notifying frontend...')
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('backend-status', { status: 'ready' })
+            }
+        })
         backendService.start()
 
         // 监听打开外部链接的请求
@@ -321,6 +327,10 @@ app.whenReady().then(async () => {
             if (url.startsWith('http://') || url.startsWith('https://')) {
                 await shell.openExternal(url)
             }
+        })
+
+        ipcMain.handle('backend:check-ready', () => {
+            return backendService ? backendService.isReady : false
         })
 
         // 快捷键设置

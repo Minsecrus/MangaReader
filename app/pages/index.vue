@@ -105,6 +105,21 @@ const handleOcrCancel = () => {
     isOcrMode.value = false
 }
 
+const handleAppReady = () => {
+    console.log('App Ready! Triggering initial translation...')
+
+    // 这里不需要手动调翻译 API，因为 originalText 的值本身就没变。
+    // 但是，Translation 组件是 watch immediate 的。
+    // 当 Loader 存在时，Translation 组件其实已经加载并在后台跑了一次翻译了。
+    // 为了让用户有“加载好了”的感觉，我们可以在这里做点别的，或者什么都不做，
+    // 因为 Translation 组件会在后台默默把那句日语翻译好，等 Loader 一消失，用户看到的就是翻译好的结果。
+
+    // 如果你想强制刷新一下：
+    const temp = originalText.value
+    originalText.value = ''
+    nextTick(() => originalText.value = temp)
+}
+
 onMounted(() => {
     initSettings()
 
@@ -129,6 +144,8 @@ onMounted(() => {
 
 <template>
     <div class="min-h-screen bg-manga-50 dark:bg-manga-700">
+        <GlobalLoader @ready="handleAppReady" />
+
         <!-- 全局 Toast 容器 -->
         <ToastContainer />
 

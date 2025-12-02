@@ -59,6 +59,9 @@ export interface IElectronAPI {
     downloadModel: () => Promise<{ success: boolean; error?: string }>
     deleteModel: () => Promise<{ success: boolean; error?: string }>
     translate: (text: string) => Promise<{ success: boolean; translation?: string; error?: string }>
+    
+    // 后端状态检查
+    checkBackendReady: () => Promise<boolean>
 }
 
 declare global {

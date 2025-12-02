@@ -4,12 +4,13 @@ interface Prop {
     originalText: string
 }
 const { originalText } = defineProps<Prop>()
+const { showToast } = useToast()
 
 const isTranslationLoading = ref(false)
 const translatedText = ref<string | null>(null)
 const showTranslation = ref(true)
 const errorType = ref<string | null>(null)
-const { showToast } = useToast()
+const isFirstLoad = ref(true)
 
 // 防抖定时器引用
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -36,16 +37,25 @@ const fetchTranslation = async (text: string) => {
                 translatedText.value = null
                 errorType.value = 'MODEL_MISSING' // 标记为模型丢失
             } else {
-                // 其他普通错误（如网络问题、内存不足等）依然弹窗提示
+                // 2. 普通错误 (网络、超时等)
                 console.error('翻译失败:', errMsg)
-                showToast(`翻译失败: ${errMsg}`)
+
+                // 如果是首次加载，抑制 Toast；否则正常弹出
+                if (isFirstLoad.value) {
+                    console.log('首次加载失败，已抑制 Toast 提示')
+                } else {
+                    showToast(`翻译失败: ${errMsg}`)
+                }
             }
         }
     } catch (error) {
-        console.error('翻译失败:', error)
-        showToast(`翻译失败，请重试 ${error}`)
+        console.error('通信错误:', error)
+        if (!isFirstLoad.value) {
+            showToast(`翻译失败，请重试 ${error}`)
+        }
     } finally {
         isTranslationLoading.value = false
+        isFirstLoad.value = false
     }
 }
 
@@ -81,7 +91,8 @@ const handleRetranslate = async () => {
     translatedText.value = null // 为了视觉上让用户感到“刷新了”，先清空一下
     // 立即清除可能存在的防抖定时器，避免冲突
     if (debounceTimer) clearTimeout(debounceTimer)
-
+    // 用户手动点击肯定不是首次加载
+    isFirstLoad.value = false
     await fetchTranslation(originalText)
 }
 

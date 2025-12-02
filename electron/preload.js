@@ -52,5 +52,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 模型API管理
     checkModel: () => ipcRenderer.invoke('model:check'),
     downloadModel: () => ipcRenderer.invoke('model:download'),
-    deleteModel: () => ipcRenderer.invoke('model:delete')
+    deleteModel: () => ipcRenderer.invoke('model:delete'),
+    // 检查后端状态
+    checkBackendReady: () => ipcRenderer.invoke('backend:check-ready'),
 })

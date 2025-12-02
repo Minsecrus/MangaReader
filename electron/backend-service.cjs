@@ -1,9 +1,11 @@
-// electron/ocr-service.cjs
+// electron/backend-service.cjs
 const { spawn } = require('child_process')
 const path = require('path')
+const { EventEmitter } = require('events')
 
-class BackendService {
+class BackendService extends EventEmitter {
     constructor(modelPath) {
+        super()
         this.modelPath = modelPath
         this.process = null
         this.isReady = false
@@ -91,10 +93,10 @@ class BackendService {
         if (response.status === 'ready') {
             this.isReady = true
             console.log('✅ OCR Service is Ready!')
+            this.emit('ready')
             return
         }
 
-        // 关键点 1：必须从 response 里解构出 tokens
         const { id, success, text, tokens, translation, exists, error } = response
 
         if (id !== undefined && this.pendingRequests.has(id)) {
@@ -102,12 +104,9 @@ class BackendService {
             this.pendingRequests.delete(id)
 
             if (success) {
-                // 关键点 2：如果是分词请求，Python返回的是 tokens，text 是空的
-                // 所以这里要判断：如果有 tokens，就返回对象；否则返回 text 字符串
                 if (tokens) {
                     resolve({ tokens: tokens })
                 } else if (translation) {
-                    // 新增：如果是翻译任务，返回翻译结果对象
                     resolve({ translation: translation })
                 } else if (exists !== undefined) {
                     resolve({ exists })
@@ -120,7 +119,6 @@ class BackendService {
         }
     }
 
-    // ✅ 新增：通用请求发送方法 (避免代码重复)
     _sendRequest(payload, timeout = 120000) {
         return new Promise((resolve, reject) => {
             if (!this.isReady) {
