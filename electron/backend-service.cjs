@@ -114,6 +114,11 @@ class BackendService extends EventEmitter {
             return
         }
 
+        if (response.type === 'init_error') {
+            this.emit('init-error', response)
+            return
+        }
+
         const { id, success, text, tokens, translation, exists, error } = response
 
         if (id !== undefined && this.pendingRequests.has(id)) {

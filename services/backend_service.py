@@ -42,7 +42,21 @@ def main():
             "message": "正在加载 OCR 引擎 (首次运行可能需要下载模型)...",
         }
     )
-    ocr_engine = OCREngine(model_dir=args.model_dir)
+    try:
+        ocr_engine = OCREngine(model_dir=args.model_dir)
+    except Exception as e:
+        log_message(f"[ERROR] OCR Init Failed: {e}")
+        send_response(
+            {
+                "type": "init_error",
+                "message": f"OCR 模型加载失败: {str(e)}",
+                "detail": "请检查网络连接，或尝试手动下载模型。",
+            }
+        )
+        # 保持进程存活一段时间以便前端接收消息，或者直接退出
+        # 这里我们选择不退出，或者等待前端指令，但为了简单，我们让它继续运行(虽然没法OCR)
+        # 或者直接 sys.exit(1)
+        sys.exit(1)
 
     # 初始化分词器
     send_response({"type": "init_status", "message": "正在加载日语分词组件..."})

@@ -335,6 +335,13 @@ app.whenReady().then(async () => {
             }
         })
 
+        // 监听初始化错误
+        backendService.on('init-error', (data) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('init-error', data)
+            }
+        })
+
         backendService.on('download-progress', (percent) => {
             // console.log(`Downloading: ${percent}%`) // 可选：在终端显示
             if (mainWindow && !mainWindow.isDestroyed()) {

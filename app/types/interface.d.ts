@@ -64,6 +64,7 @@ export interface IElectronAPI {
     onDownloadProgress: (callback: (percent: number) => void) => () => void
     onInitStatus: (callback: (msg: string) => void) => () => void
     onInitProgress: (callback: (data: { percent: number, message: string }) => void) => () => void
+    onInitError: (callback: (data: { message: string, detail: string }) => void) => () => void
 }
 
 declare global {
