@@ -17,10 +17,10 @@ let store
 
 function getModelsPath() {
     // 开发环境：项目根目录/models
-    // 生产环境：安装目录/resources/models
+    // 生产环境：安装目录/resources/backend/models
     return isDev
         ? path.join(__dirname, '../models')
-        : path.join(process.resourcesPath, 'models')
+        : path.join(process.resourcesPath, 'backend', 'models')
 }
 
 //  初始化 Electron Store (处理 ESM 导入)
@@ -348,6 +348,14 @@ app.whenReady().then(async () => {
                 mainWindow.webContents.send('model:download-progress', percent)
             }
         })
+        
+        // 转发后端日志到前端
+        backendService.on('log', (msg) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('backend:log', msg)
+            }
+        })
+
         backendService.start()
 
         // 监听打开外部链接的请求

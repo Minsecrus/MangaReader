@@ -8,49 +8,7 @@ from io import BytesIO
 from PIL import Image
 from manga_ocr import MangaOcr
 from huggingface_hub import snapshot_download
-from .utils import log_message
-
-#  引入 tqdm
-import tqdm
-
-#  Monkey Patch tqdm (复用 sakura_engine 的逻辑，或者提取到 utils)
-# 这里为了独立性，我们简单实现一个针对 OCR 的 patch
-_original_init = tqdm.tqdm.__init__
-_original_update = tqdm.tqdm.update
-
-
-def _patched_init(self, *args, **kwargs):
-    kwargs["disable"] = False
-    kwargs["file"] = open(os.devnull, "w")
-    _original_init(self, *args, **kwargs)
-    self.last_percent = -1
-
-
-def _patched_update(self, n=1):
-    _original_update(self, n)
-    if self.total and self.total > 0:
-        percent = (self.n / self.total) * 100
-        if int(percent * 2) > getattr(self, "last_percent", -1):
-            self.last_percent = int(percent * 2)
-            # 注意：这里 type 是 init_progress，专门用于启动时的加载器
-            msg = {
-                "type": "init_progress",
-                "percent": round(percent, 1),
-                "message": "正在下载 OCR 核心组件...",
-            }
-            sys.stdout.write(json.dumps(msg) + "\n")
-            sys.stdout.flush()
-
-
-@contextlib.contextmanager
-def patch_tqdm():
-    tqdm.tqdm.__init__ = _patched_init
-    tqdm.tqdm.update = _patched_update
-    try:
-        yield
-    finally:
-        tqdm.tqdm.__init__ = _original_init
-        tqdm.tqdm.update = _original_update
+from .utils import log_message, patch_tqdm
 
 
 class OCREngine:
@@ -61,6 +19,11 @@ class OCREngine:
             raise ValueError("Model directory is required for cleaner deployment.")
 
         self.model_dir = model_dir
+
+        # 强制使用 CPU，避免 CUDA 初始化带来的不确定性 (除非用户明确有 CUDA 环境)
+        # 对于 MangaOCR 这种轻量级模型，CPU 足够快且更稳定
+        # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
         self._load_model()
 
     def _check_integrity(self):
@@ -73,16 +36,36 @@ class OCREngine:
             "config.json",
             "preprocessor_config.json",
             "tokenizer_config.json",
-            "vocab.txt",
         ]
 
         # 1. 检查小文件
         for f in required_files:
-            if not os.path.exists(os.path.join(self.model_dir, f)):
+            file_path = os.path.join(self.model_dir, f)
+            if not os.path.exists(file_path):
                 log_message(f"Missing file: {f}")
                 return False
+            if os.path.getsize(file_path) == 0:
+                log_message(f"File is empty: {f}")
+                return False
 
-        # 2. 检查大权重文件 (safetensors 是新标准，bin 是旧标准，兼容一下)
+        # 2. 检查词表文件 (兼容 vocab.txt 和 sentencepiece.bpe.model)
+        # 修正：如果存在 tokenizer.json，则不需要 vocab.txt 或 sentencepiece.bpe.model
+        # 因为我们将强制使用 use_fast=True
+        has_tokenizer_json = os.path.exists(
+            os.path.join(self.model_dir, "tokenizer.json")
+        )
+        has_vocab = os.path.exists(os.path.join(self.model_dir, "vocab.txt"))
+        has_spm = os.path.exists(
+            os.path.join(self.model_dir, "sentencepiece.bpe.model")
+        )
+
+        if not (has_tokenizer_json or has_vocab or has_spm):
+            log_message(
+                "Missing vocabulary file (tokenizer.json, vocab.txt or sentencepiece.bpe.model)"
+            )
+            return False
+
+        # 3. 检查大权重文件 (safetensors 是新标准，bin 是旧标准，兼容一下)
         has_safetensors = os.path.exists(
             os.path.join(self.model_dir, "model.safetensors")
         )
@@ -109,7 +92,7 @@ class OCREngine:
 
             try:
                 #  使用 patch_tqdm 捕获下载进度
-                with patch_tqdm():
+                with patch_tqdm(msg_type="init_progress", msg_key="message", default_msg="正在下载 OCR 模型..."):
                     snapshot_download(
                         repo_id="kha-white/manga-ocr-base",
                         local_dir=self.model_dir,
@@ -121,13 +104,16 @@ class OCREngine:
                 raise e
 
         # 3. 加载模型 (此时文件一定在本地了)
-        log_message("[INFO] Loading OCR Engine from local storage...")
+        abs_model_path = os.path.abspath(self.model_dir)
+        log_message(f"[INFO] Loading OCR Engine from local storage: {abs_model_path}")
+
         try:
-            # 强制指定 path，MangaOcr 就会直接读文件，不再联网也不读缓存
-            self.mocr = MangaOcr(pretrained_model_name_or_path=self.model_dir)
-            log_message("[INFO] OCR Engine initialized successfully.")
+            with patch_tqdm(msg_type="init_progress", msg_key="message", default_msg="正在加载 OCR 引擎..."):
+                # 强制指定 local_files_only=True，因为我们刚才已经确认下载了
+                self.mocr = MangaOcr(pretrained_model_name_or_path=abs_model_path)
+            log_message("MangaOCR Initialized Successfully.")
         except Exception as e:
-            log_message(f"[ERROR] Failed to load model: {e}")
+            log_message(f"[ERROR] MangaOCR Load Failed: {e}")
             raise e
 
     def recognize(self, image_base64):
@@ -142,4 +128,16 @@ class OCREngine:
         image_data = base64.b64decode(image_base64)
         img = Image.open(BytesIO(image_data))
 
-        return self.mocr(img)
+        # [FIX] Add padding to improve OCR accuracy on tight crops
+        # MangaOCR works best when there is some white space around the text
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+            
+        padding = 20
+        new_width = img.width + 2 * padding
+        new_height = img.height + 2 * padding
+        
+        new_img = Image.new("RGB", (new_width, new_height), (255, 255, 255))
+        new_img.paste(img, (padding, padding))
+
+        return self.mocr(new_img)

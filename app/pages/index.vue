@@ -25,15 +25,6 @@ const handleOcrCapture = async (selectionData: { left: number, top: number, widt
     try {
         console.log('OCR 框选区域:', selectionData)
 
-        // 创建 canvas 截取选中区域
-        const canvas = document.createElement('canvas')
-        const { left, top, width, height } = selectionData
-
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')!
-
-        // 截取整个页面到 canvas
         // 查找 ImageUpload 组件内的图片元素
         const imgElement = document.querySelector('img[alt^="当前图片"]') as HTMLImageElement
 
@@ -45,36 +36,74 @@ const handleOcrCapture = async (selectionData: { left: number, top: number, widt
             throw new Error('图片未加载完成')
         }
 
-        // 获取图片元素的位置
-        const imgRect = imgElement.getBoundingClientRect()
+        // 1. 获取图片元素在屏幕上的位置和尺寸 (Client Dimensions)
+        const rect = imgElement.getBoundingClientRect()
+        const { naturalWidth, naturalHeight } = imgElement
 
-        // 计算相对于图片的坐标
-        const relativeLeft = left - imgRect.left
-        const relativeTop = top - imgRect.top
+        // 2. 计算 object-fit: contain 导致的真实渲染区域
+        // 计算宽比和高比
+        const rw = rect.width / naturalWidth
+        const rh = rect.height / naturalHeight
+        
+        // 真实缩放比例 (取较小值，因为是 contain)
+        const ratio = Math.min(rw, rh)
+        
+        // 图片实际渲染的宽高
+        const realW = naturalWidth * ratio
+        const realH = naturalHeight * ratio
+        
+        // 计算留白 (Letterboxing / Pillarboxing)
+        const gapX = (rect.width - realW) / 2
+        const gapY = (rect.height - realH) / 2
 
-        // 创建临时 canvas 绘制原图
-        const tempCanvas = document.createElement('canvas')
-        tempCanvas.width = imgElement.naturalWidth
-        tempCanvas.height = imgElement.naturalHeight
-        const tempCtx = tempCanvas.getContext('2d')!
-        tempCtx.drawImage(imgElement, 0, 0)
+        // 3. 将屏幕坐标映射回原图坐标
+        // selectionData.left/top 是相对于视口的坐标
+        // rect.left/top 也是相对于视口的坐标
+        // 减去 rect.left/top 得到相对于 img 元素的坐标
+        // 再减去 gapX/gapY 得到相对于渲染图片内容的坐标
+        // 最后除以 ratio 还原为原图尺寸
+        let sourceX = (selectionData.left - rect.left - gapX) / ratio
+        let sourceY = (selectionData.top - rect.top - gapY) / ratio
+        let sourceW = selectionData.width / ratio
+        let sourceH = selectionData.height / ratio
 
-        // 计算缩放比例
-        const scaleX = imgElement.naturalWidth / imgRect.width
-        const scaleY = imgElement.naturalHeight / imgRect.height
+        // 4. 边界检查 (防止选区超出图片实际范围)
+        // 修正 X
+        if (sourceX < 0) {
+            sourceW += sourceX // 减去左边超出的部分
+            sourceX = 0
+        }
+        if (sourceX + sourceW > naturalWidth) {
+            sourceW = naturalWidth - sourceX
+        }
 
-        // 截取选中区域
-        const imageData = tempCtx.getImageData(
-            relativeLeft * scaleX,
-            relativeTop * scaleY,
-            width * scaleX,
-            height * scaleY
+        // 修正 Y
+        if (sourceY < 0) {
+            sourceH += sourceY // 减去顶部超出的部分
+            sourceY = 0
+        }
+        if (sourceY + sourceH > naturalHeight) {
+            sourceH = naturalHeight - sourceY
+        }
+
+        // 如果选区完全在图片外，报错或返回
+        if (sourceW <= 0 || sourceH <= 0) {
+             throw new Error('选区未包含有效图片内容')
+        }
+
+        // 5. 创建 Canvas 进行裁剪
+        const canvas = document.createElement('canvas')
+        // Canvas 大小设置为原图分辨率下的选区大小 (保证清晰度)
+        canvas.width = sourceW
+        canvas.height = sourceH
+        const ctx = canvas.getContext('2d')!
+
+        // drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
+        ctx.drawImage(
+            imgElement,
+            sourceX, sourceY, sourceW, sourceH, // 原图采样区域
+            0, 0, sourceW, sourceH              // Canvas 绘制区域
         )
-
-        // 绘制到目标 canvas
-        canvas.width = width * scaleX
-        canvas.height = height * scaleY
-        ctx!.putImageData(imageData, 0, 0)
 
         // 转换为 base64
         const imageBase64 = canvas.toDataURL('image/png')

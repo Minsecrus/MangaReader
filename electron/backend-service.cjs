@@ -23,7 +23,9 @@ class BackendService extends EventEmitter {
             pythonPath = path.join(__dirname, '../services/venv/Scripts/python.exe')
             scriptPath = path.join(__dirname, '../services/backend_service.py')
         } else {
-            pythonPath = path.join(process.resourcesPath, 'services/backend.exe')
+            // 生产环境：直接调用打包好的 exe
+            // 注意：electron-forge extraResource 会将文件放在 resources 根目录下
+            pythonPath = path.join(process.resourcesPath, 'backend', 'backend.exe')
             scriptPath = null
         }
 
@@ -59,7 +61,8 @@ class BackendService extends EventEmitter {
         this.process.stderr.on('data', (data) => {
             const msg = data.toString().trim()
             console.log('[OCR Core]', msg)
-            // 如果你想在前端显示下载进度，可以通过 ipcMain 发送这个 msg 到前端
+            // 发送日志事件，以便 main.js 可以转发给前端
+            this.emit('log', msg)
         })
 
         // 监听数据 (stdout)
@@ -75,14 +78,20 @@ class BackendService extends EventEmitter {
                     const response = JSON.parse(line)
                     this._handleResponse(response)
                 } catch (e) {
-                    // 忽略非 JSON 输出（虽然 stderr 应该捕获大部分日志，但以防万一）
+                    console.error('[JSON Parse Error]', e, 'Line:', line)
+                    this.emit('log', `[JSON Parse Error] ${e.message} Line: ${line}`)
                 }
             })
         })
 
-        this.process.on('error', (err) => console.error('OCR Process Error:', err))
+        this.process.on('error', (err) => {
+            console.error('OCR Process Error:', err)
+            this.emit('log', `[Process Error] ${err.message}`)
+        })
+        
         this.process.on('exit', (code) => {
             console.log(`OCR Process exited: ${code}`)
+            this.emit('log', `[Process Exit] Code: ${code}`)
             this.isReady = false
             this.pendingRequests.forEach(r => r.reject(new Error('OCR Service Exited')))
             this.pendingRequests.clear()
@@ -90,6 +99,8 @@ class BackendService extends EventEmitter {
     }
 
     _handleResponse(response) {
+        // console.log('[Backend Service] [DEBUG] Raw response object:', JSON.stringify(response).substring(0, 100) + '...')
+
         if (response.status === 'ready') {
             this.isReady = true
             console.log('OCR Service is Ready!')
@@ -122,6 +133,7 @@ class BackendService extends EventEmitter {
         const { id, success, text, tokens, translation, exists, error } = response
 
         if (id !== undefined && this.pendingRequests.has(id)) {
+            console.log(`[Backend Service] [DEBUG] Resolving request ID: ${id}, Success: ${success}`)
             const { resolve, reject } = this.pendingRequests.get(id)
             this.pendingRequests.delete(id)
 
@@ -138,12 +150,15 @@ class BackendService extends EventEmitter {
             } else {
                 reject(new Error(error))
             }
+        } else if (id !== undefined) {
+             console.warn(`[Backend Service] [WARN] Received response for unknown ID: ${id}`)
         }
     }
 
     _sendRequest(payload, timeout = 120000) {
         return new Promise((resolve, reject) => {
             if (!this.isReady) {
+                console.warn('[Backend Service] [WARN] Service not ready, rejecting request.')
                 reject(new Error('OCR Service is initializing... please wait.'))
                 return
             }
@@ -153,10 +168,18 @@ class BackendService extends EventEmitter {
 
             // 合并 ID 和 具体的请求数据
             const request = { ...payload, id }
+            
+            console.log(`[Backend Service] [DEBUG] Sending request ID: ${id}, Command: ${payload.command}`)
 
             try {
-                this.process.stdin.write(JSON.stringify(request) + '\n')
+                // [Fix Encoding] 使用 Base64 传输，彻底避免 Windows 管道编码问题
+                const jsonStr = JSON.stringify(request)
+                const base64Str = Buffer.from(jsonStr, 'utf-8').toString('base64')
+                
+                console.log(`[Backend Service] [DEBUG] Writing Base64 payload to stdin (Length: ${base64Str.length})`)
+                this.process.stdin.write(base64Str + '\n')
             } catch (e) {
+                console.error('[Backend Service] [ERROR] Failed to write to stdin:', e)
                 this.pendingRequests.delete(id)
                 reject(e)
                 return
@@ -165,6 +188,7 @@ class BackendService extends EventEmitter {
             // 超时处理
             setTimeout(() => {
                 if (this.pendingRequests.has(id)) {
+                    console.warn(`[Backend Service] [WARN] Request ID: ${id} timed out.`)
                     this.pendingRequests.delete(id)
                     reject(new Error(`Request timeout (${timeout}ms)`))
                 }
@@ -188,6 +212,7 @@ class BackendService extends EventEmitter {
 
     // 3. 翻译
     async translate(text) {
+        console.log(`[Backend Service] [DEBUG] translate() called with text length: ${text.length}`)
         // 超时设长一点，因为第一次要下载模型 (比如 10分钟 = 600000ms)
         return this._sendRequest({ command: 'translate', text: text }, 600000)
     }

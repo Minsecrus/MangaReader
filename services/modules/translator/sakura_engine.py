@@ -7,72 +7,12 @@ import json
 import contextlib
 from .base import BaseTranslator
 from huggingface_hub import hf_hub_download
-from ..utils import log_message
-
-import tqdm
+from ..utils import log_message, patch_tqdm
 
 try:
     from llama_cpp import Llama
 except ImportError:
     Llama = None
-
-
-# 直接 Monkey Patch tqdm.tqdm 类的方法
-# 这样无论 huggingface_hub 如何引用 tqdm，都会使用我们修改后的方法
-_original_init = tqdm.tqdm.__init__
-_original_update = tqdm.tqdm.update
-
-
-def _patched_init(self, *args, **kwargs):
-    # 1. 强制开启进度条
-    kwargs["disable"] = False
-    # 2. 将原始的视觉进度条重定向到空设备 (devnull)
-    # 这样控制台就不会出现 ████▌ 这种字符，避免干扰 JSON 解析
-    kwargs["file"] = open(os.devnull, "w")
-
-    _original_init(self, *args, **kwargs)
-
-    # 初始化自定义状态
-    self.last_percent = -1
-
-
-def _patched_update(self, n=1):
-    # 调用原始 update 更新内部计数器
-    _original_update(self, n)
-
-    # 计算百分比并输出 JSON
-    if self.total and self.total > 0:
-        percent = (self.n / self.total) * 100
-
-        # 过滤频率：每 0.5% 发送一次
-        if int(percent * 2) > getattr(self, "last_percent", -1):
-            self.last_percent = int(percent * 2)
-
-            msg = {
-                "type": "download_progress",
-                "percent": round(percent, 1),
-                "filename": self.desc or "model",
-            }
-            # 3. 显式写入 stdout 并 flush，确保 Electron 能立即收到
-            sys.stdout.write(json.dumps(msg) + "\n")
-            sys.stdout.flush()
-
-
-@contextlib.contextmanager
-def patch_tqdm():
-    """
-    上下文管理器：在代码块执行期间，替换 tqdm 的行为
-    """
-    # 替换方法
-    tqdm.tqdm.__init__ = _patched_init
-    tqdm.tqdm.update = _patched_update
-
-    try:
-        yield
-    finally:
-        # 还原方法，避免影响其他模块
-        tqdm.tqdm.__init__ = _original_init
-        tqdm.tqdm.update = _original_update
 
 
 class SakuraEngine(BaseTranslator):
@@ -141,7 +81,7 @@ class SakuraEngine(BaseTranslator):
 
         try:
             #  使用上下文管理器，只在下载期间开启“间谍模式”
-            with patch_tqdm():
+            with patch_tqdm(msg_type="download_progress", msg_key="filename", default_msg="model"):
                 file_path = hf_hub_download(
                     repo_id=self.repo_id,
                     filename=self.filename,
@@ -170,17 +110,36 @@ class SakuraEngine(BaseTranslator):
             self.is_ready = False
             return
 
+        # Check file size
+        try:
+            file_size = os.path.getsize(model_path)
+            log_message(f"[DEBUG] Model file size: {file_size} bytes")
+            if file_size == 0:
+                log_message(f"[ERROR] Model file is empty: {model_path}")
+                self.is_ready = False
+                return
+        except Exception as e:
+            log_message(f"[ERROR] Failed to check model file size: {e}")
+
         try:
             log_message(f"[INFO] Loading SakuraLLM (CPU Mode) from: {model_path}")
 
+            # Force CPU mode to avoid GPU/driver issues causing access violations
             self.llm = Llama(
-                model_path=model_path, n_ctx=1024, n_threads=4, verbose=False
+                model_path=model_path,
+                n_ctx=1024,
+                n_threads=4,
+                verbose=True,
+                n_gpu_layers=0,
             )
 
             self.is_ready = True
             log_message("[INFO] SakuraLLM Engine loaded.")
         except Exception as e:
-            log_message(f"[ERROR] Failed to load Sakura: {e}")
+            import traceback
+
+            tb = traceback.format_exc()
+            log_message(f"[ERROR] Failed to load Sakura: {e}\nTraceback: {tb}")
             self.is_ready = False
 
     def translate(self, text):
@@ -196,16 +155,34 @@ class SakuraEngine(BaseTranslator):
                 f"<|im_start|>assistant\n"
             )
 
+            # ✅ 关键修正：调整推理参数
             output = self.llm(
                 prompt,
                 max_tokens=512,
-                stop=["<|im_end|>", "\n\n"],
+                # 1. 扩充停止符：
+                #    Added "≒": 日志显示它进入了同义词解释循环
+                #    Added "\n": 只要换行就强制停止（短句翻译通常只需要一行）
+                stop=["<|im_end|>", "\n\n", "≒", "\n"],
                 echo=False,
                 temperature=0.1,
+                # 2. 增加重复惩罚 (关键!)
+                #    frequency_penalty > 0 会惩罚已经出现过的词，防止死循环
+                frequency_penalty=0.5,
+                presence_penalty=0.3,
+                # 3. 限制 top_p 采样，让结果更确定
+                top_p=0.9,
             )
 
             try:
-                return output["choices"][0]["text"].strip()
+                # 提取结果并再次清洗，防止漏网之鱼
+                translation = output["choices"][0]["text"].strip()
+
+                # 双重保险：如果结果里包含了原文，或者长度异常长，可能还是循环了
+                # 这里简单处理：取第一行
+                if "\n" in translation:
+                    translation = translation.split("\n")[0]
+
+                return translation
             except Exception as e:
                 log_message(f"Sakura output error: {e}")
                 return text

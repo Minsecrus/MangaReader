@@ -79,4 +79,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('init-error', handler)
         return () => ipcRenderer.removeListener('init-error', handler)
     },
+    // 监听后端日志
+    onBackendLog: (callback) => {
+        const handler = (_event, msg) => callback(msg)
+        ipcRenderer.on('backend:log', handler)
+        return () => ipcRenderer.removeListener('backend:log', handler)
+    },
 })

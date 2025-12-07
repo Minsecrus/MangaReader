@@ -23,14 +23,19 @@ const fetchTranslation = async (text: string) => {
     errorType.value = null
 
     try {
-        console.log('发起翻译请求:', text)
+        console.log('[Frontend] [Translation.vue] Initiating translation request for:', text)
+        console.log('[Frontend] [Translation.vue] Calling window.electronAPI.translate...')
 
         const response = await window.electronAPI.translate(text)
+        
+        console.log('[Frontend] [Translation.vue] Received response:', response)
 
         if (response.success && response.translation) {
             translatedText.value = response.translation
+            console.log('[Frontend] [Translation.vue] Translation success:', translatedText.value)
         } else {
             const errMsg = response.error || '未知错误'
+            console.error('[Frontend] [Translation.vue] Translation failed with error:', errMsg)
 
             // 检测特定的错误代码
             if (errMsg.includes('MODEL_NOT_FOUND')) {
@@ -49,7 +54,7 @@ const fetchTranslation = async (text: string) => {
             }
         }
     } catch (error) {
-        console.error('通信错误:', error)
+        console.error('[Frontend] [Translation.vue] Communication error:', error)
         if (!isFirstLoad.value) {
             showToast(`翻译失败，请重试 ${error}`)
         }

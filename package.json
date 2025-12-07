@@ -1,5 +1,7 @@
 {
   "name": "MangaReader",
+  "author": "Malloy",
+  "description": "A tool helps manga lover and Japanese learner read manga easily",
   "type": "module",
   "version": "1.0.0",
   "main": "electron/main.cjs",
@@ -8,12 +10,15 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
-    "generate": "nuxt generate",
+    "generate": "nuxt generate && node fix-paths.cjs",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make"
+  },
+  "config": {
+    "forge": "./forge.config.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",

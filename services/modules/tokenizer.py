@@ -51,6 +51,17 @@ class JapaneseTokenizer:
         if not self.tokenizer:
             raise Exception(f"Tokenizer not ready")
 
+        # 调试日志：打印输入文本的 repr，查看是否有乱码
+        log_message(f"Tokenizing text: {repr(text)}")
+
+        # 预处理：移除可能导致问题的特殊字符 (如 surrogates)
+        # 仅保留基本多文种平面 (BMP) 和常见的扩展平面字符
+        # 或者简单地忽略无法编码的字符
+        try:
+            text = text.encode('utf-8', 'replace').decode('utf-8')
+        except Exception:
+            pass
+
         results = self.tokenizer.tokenize(text, self.mode)
         tokens = []
 
@@ -81,5 +92,6 @@ class JapaneseTokenizer:
                     "type": frontend_type,
                 }
             )
-
+        
+        log_message(f"Tokenization complete. Found {len(tokens)} tokens.")
         return tokens
