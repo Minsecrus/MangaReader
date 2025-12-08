@@ -352,7 +352,7 @@ app.whenReady().then(async () => {
                 mainWindow.webContents.send('model:download-progress', percent)
             }
         })
-        
+
         // 转发后端日志到前端
         backendService.on('log', (msg) => {
             if (mainWindow && !mainWindow.isDestroyed()) {

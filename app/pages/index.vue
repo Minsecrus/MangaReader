@@ -44,14 +44,14 @@ const handleOcrCapture = async (selectionData: { left: number, top: number, widt
         // 计算宽比和高比
         const rw = rect.width / naturalWidth
         const rh = rect.height / naturalHeight
-        
+
         // 真实缩放比例 (取较小值，因为是 contain)
         const ratio = Math.min(rw, rh)
-        
+
         // 图片实际渲染的宽高
         const realW = naturalWidth * ratio
         const realH = naturalHeight * ratio
-        
+
         // 计算留白 (Letterboxing / Pillarboxing)
         const gapX = (rect.width - realW) / 2
         const gapY = (rect.height - realH) / 2
@@ -88,7 +88,7 @@ const handleOcrCapture = async (selectionData: { left: number, top: number, widt
 
         // 如果选区完全在图片外，报错或返回
         if (sourceW <= 0 || sourceH <= 0) {
-             throw new Error('选区未包含有效图片内容')
+            throw new Error('选区未包含有效图片内容')
         }
 
         // 5. 创建 Canvas 进行裁剪

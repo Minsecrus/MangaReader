@@ -20,7 +20,11 @@ def send_response(response):
         print(json.dumps(response, ensure_ascii=True), flush=True)
     except Exception as e:
         # 如果连报错都发不出去，那就只能写 stderr 了
-        print(f"[Backend Service] [CRITICAL] Failed to send response: {e}", file=sys.stderr, flush=True)
+        print(
+            f"[Backend Service] [CRITICAL] Failed to send response: {e}",
+            file=sys.stderr,
+            flush=True,
+        )
 
 
 # --- TQDM Patching for Electron Progress Bar ---
@@ -35,6 +39,7 @@ _tqdm_config = {
     "msg_value": "Loading...",
 }
 
+
 def _patched_init(self, *args, **kwargs):
     # 1. 强制开启进度条
     kwargs["disable"] = False
@@ -43,6 +48,7 @@ def _patched_init(self, *args, **kwargs):
     kwargs["file"] = open(os.devnull, "w")
     _original_init(self, *args, **kwargs)
     self.last_percent = -1
+
 
 def _patched_update(self, n=1):
     # 调用原始 update 更新内部计数器
@@ -65,6 +71,7 @@ def _patched_update(self, n=1):
             sys.stdout.write(json.dumps(msg) + "\n")
             sys.stdout.flush()
 
+
 @contextlib.contextmanager
 def patch_tqdm(msg_type="progress", msg_key="message", default_msg="Loading..."):
     """
@@ -74,7 +81,7 @@ def patch_tqdm(msg_type="progress", msg_key="message", default_msg="Loading...")
     _tqdm_config["type"] = msg_type
     _tqdm_config["msg_key"] = msg_key
     _tqdm_config["msg_value"] = default_msg
-    
+
     tqdm.tqdm.__init__ = _patched_init
     tqdm.tqdm.update = _patched_update
     try:

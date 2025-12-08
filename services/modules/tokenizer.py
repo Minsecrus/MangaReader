@@ -58,7 +58,7 @@ class JapaneseTokenizer:
         # 仅保留基本多文种平面 (BMP) 和常见的扩展平面字符
         # 或者简单地忽略无法编码的字符
         try:
-            text = text.encode('utf-8', 'replace').decode('utf-8')
+            text = text.encode("utf-8", "replace").decode("utf-8")
         except Exception:
             pass
 
@@ -92,6 +92,6 @@ class JapaneseTokenizer:
                     "type": frontend_type,
                 }
             )
-        
+
         log_message(f"Tokenization complete. Found {len(tokens)} tokens.")
         return tokens

@@ -8,12 +8,12 @@ import argparse
 import base64
 
 # --- 1. 锁定运行目录 & 强制手动加载 DLL (Fix Error 126 & 1114) ---
-if getattr(sys, 'frozen', False):
+if getattr(sys, "frozen", False):
     base_dir = os.path.dirname(sys.executable)
-    
+
     # Pre-load OpenMP (libiomp5md.dll) if present in root
     # This is still needed to prevent torch from loading its own incompatible version
-    omp_path = os.path.join(base_dir, 'libiomp5md.dll')
+    omp_path = os.path.join(base_dir, "libiomp5md.dll")
     if os.path.exists(omp_path):
         try:
             ctypes.CDLL(omp_path, winmode=0)
@@ -26,11 +26,15 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # 解决 Windows 编码
 try:
-    sys.stdout.reconfigure(encoding='utf-8')
-    sys.stderr.reconfigure(encoding='utf-8')
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 except AttributeError:
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", line_buffering=True)
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", line_buffering=True)
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", line_buffering=True
+    )
+    sys.stderr = io.TextIOWrapper(
+        sys.stderr.buffer, encoding="utf-8", line_buffering=True
+    )
 
 # 导入业务模块
 from modules.utils import log_message, send_response
@@ -54,11 +58,11 @@ def main():
     else:
         # 默认情况下，假设 models 在当前目录或上级目录
         # 在打包环境中，通常是 resources/models
-        if getattr(sys, 'frozen', False):
-             # 如果是打包环境，默认 models 路径可能在 exe 同级目录
-             models_root = os.path.join(os.path.dirname(sys.executable), 'models')
+        if getattr(sys, "frozen", False):
+            # 如果是打包环境，默认 models 路径可能在 exe 同级目录
+            models_root = os.path.join(os.path.dirname(sys.executable), "models")
         else:
-             models_root = os.path.join(os.getcwd(), 'models')
+            models_root = os.path.join(os.getcwd(), "models")
 
     translation_root = os.path.join(models_root, "translation")
 
@@ -76,7 +80,7 @@ def main():
         # 真正的初始化 (load_model) 会在 check_model_exists() 返回 True 后，
         # 在 translate 命令中按需触发。
         translator = get_translator_engine("sakura", translation_root)
-        
+
     except Exception as e:
         log_message(f"[WARNING] Translator Pre-init Failed (Non-fatal): {e}")
 
@@ -89,13 +93,13 @@ def main():
     )
     try:
         from modules.ocr_engine import OCREngine
-        
+
         # 确保传入有效的 OCR 模型路径
         if args.model_dir:
             ocr_model_path = args.model_dir
         else:
             ocr_model_path = os.path.join(models_root, "ocr")
-            
+
         ocr_engine = OCREngine(model_dir=ocr_model_path)
     except Exception as e:
         log_message(f"[ERROR] OCR Init Failed: {e}")
@@ -111,12 +115,13 @@ def main():
     # 初始化分词器
     send_response({"type": "init_status", "message": "正在加载日语分词组件..."})
     from modules.tokenizer import JapaneseTokenizer
+
     tokenizer = JapaneseTokenizer()
-    
+
     # [MODIFIED] Translator is already instantiated above for pre-loading.
     # We just need to ensure it's assigned to the variable we use later.
     if translator is None:
-         translator = get_translator_engine("sakura", translation_root)
+        translator = get_translator_engine("sakura", translation_root)
 
     # 准备就绪
     send_response({"type": "init_status", "message": "资源加载完毕，即将进入..."})
@@ -125,7 +130,7 @@ def main():
 
     # 4. 消息循环
     import base64
-    
+
     for line in sys.stdin:
         try:
             line = line.strip()
@@ -137,7 +142,7 @@ def main():
                 # 1. Base64 -> Bytes (UTF-8)
                 json_bytes = base64.b64decode(line)
                 # 2. Bytes -> String
-                json_str = json_bytes.decode('utf-8')
+                json_str = json_bytes.decode("utf-8")
                 # 3. Parse JSON
                 request = json.loads(json_str)
             except Exception as e:
@@ -176,15 +181,21 @@ def main():
             elif command == "translate":
                 try:
                     text = request.get("text", "")
-                    log_message(f"[DEBUG] Processing translate request for: {repr(text)[:50]}...")
+                    log_message(
+                        f"[DEBUG] Processing translate request for: {repr(text)[:50]}..."
+                    )
 
                     # 1. 检查是否已加载
                     if not translator.is_ready:
-                        log_message("[DEBUG] Translator not ready. Checking model existence...")
+                        log_message(
+                            "[DEBUG] Translator not ready. Checking model existence..."
+                        )
                         # 2. 检查物理文件是否存在
                         if translator.check_model_exists():
                             # 存在则加载
-                            log_message("[DEBUG] Model exists. Initializing translator...")
+                            log_message(
+                                "[DEBUG] Model exists. Initializing translator..."
+                            )
                             translator.initialize()
                         else:
                             log_message("[ERROR] Model not found.")
@@ -202,6 +213,7 @@ def main():
                     # 捕获错误 (包括上面的 MODEL_NOT_FOUND)
                     log_message(f"[ERROR] Translation Error: {e}")
                     import traceback
+
                     log_message(f"[ERROR] Traceback: {traceback.format_exc()}")
                     send_response({"id": req_id, "success": False, "error": str(e)})
 

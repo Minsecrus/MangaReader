@@ -88,7 +88,7 @@ class BackendService extends EventEmitter {
             console.error('OCR Process Error:', err)
             this.emit('log', `[Process Error] ${err.message}`)
         })
-        
+
         this.process.on('exit', (code) => {
             console.log(`OCR Process exited: ${code}`)
             this.emit('log', `[Process Exit] Code: ${code}`)
@@ -151,7 +151,7 @@ class BackendService extends EventEmitter {
                 reject(new Error(error))
             }
         } else if (id !== undefined) {
-             console.warn(`[Backend Service] [WARN] Received response for unknown ID: ${id}`)
+            console.warn(`[Backend Service] [WARN] Received response for unknown ID: ${id}`)
         }
     }
 
@@ -168,14 +168,14 @@ class BackendService extends EventEmitter {
 
             // 合并 ID 和 具体的请求数据
             const request = { ...payload, id }
-            
+
             console.log(`[Backend Service] [DEBUG] Sending request ID: ${id}, Command: ${payload.command}`)
 
             try {
                 // [Fix Encoding] 使用 Base64 传输，彻底避免 Windows 管道编码问题
                 const jsonStr = JSON.stringify(request)
                 const base64Str = Buffer.from(jsonStr, 'utf-8').toString('base64')
-                
+
                 console.log(`[Backend Service] [DEBUG] Writing Base64 payload to stdin (Length: ${base64Str.length})`)
                 this.process.stdin.write(base64Str + '\n')
             } catch (e) {

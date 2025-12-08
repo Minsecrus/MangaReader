@@ -92,7 +92,11 @@ class OCREngine:
 
             try:
                 #  使用 patch_tqdm 捕获下载进度
-                with patch_tqdm(msg_type="init_progress", msg_key="message", default_msg="正在下载 OCR 模型..."):
+                with patch_tqdm(
+                    msg_type="init_progress",
+                    msg_key="message",
+                    default_msg="正在下载 OCR 模型...",
+                ):
                     snapshot_download(
                         repo_id="kha-white/manga-ocr-base",
                         local_dir=self.model_dir,
@@ -108,7 +112,11 @@ class OCREngine:
         log_message(f"[INFO] Loading OCR Engine from local storage: {abs_model_path}")
 
         try:
-            with patch_tqdm(msg_type="init_progress", msg_key="message", default_msg="正在加载 OCR 引擎..."):
+            with patch_tqdm(
+                msg_type="init_progress",
+                msg_key="message",
+                default_msg="正在加载 OCR 引擎...",
+            ):
                 # 强制指定 local_files_only=True，因为我们刚才已经确认下载了
                 self.mocr = MangaOcr(pretrained_model_name_or_path=abs_model_path)
             log_message("MangaOCR Initialized Successfully.")
@@ -130,13 +138,13 @@ class OCREngine:
 
         # [FIX] Add padding to improve OCR accuracy on tight crops
         # MangaOCR works best when there is some white space around the text
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-            
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+
         padding = 20
         new_width = img.width + 2 * padding
         new_height = img.height + 2 * padding
-        
+
         new_img = Image.new("RGB", (new_width, new_height), (255, 255, 255))
         new_img.paste(img, (padding, padding))
 
