@@ -1,4 +1,8 @@
 // main.cjs
+if (require('electron-squirrel-startup')) {
+    require('electron').app.quit();
+    process.exit(0);
+}
 const { app, BrowserWindow, ipcMain, desktopCapturer, screen, globalShortcut, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')

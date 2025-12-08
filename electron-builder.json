@@ -1,0 +1,38 @@
+{
+  "appId": "com.malloy.mangareader",
+  "productName": "MangaReader",
+  "directories": {
+    "output": "dist_electron"
+  },
+  "files": [
+    "electron/**/*",
+    "package.json",
+    ".output/public/**/*",
+    "public/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "dist/backend",
+      "to": "backend"
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "icon": "public/MangaReaderLogo.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "MangaReader",
+    "deleteAppDataOnUninstall": true
+  }
+}

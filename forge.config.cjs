@@ -6,36 +6,33 @@ module.exports = {
     icon: './public/MangaReaderLogo',
     asar: true,
     // 1. 将打包好的 Python 后端作为额外资源复制到 resources 目录
+    // 注意：PyInstaller 生成的是 backend 文件夹 (onedir 模式)，所以这里必须复制整个文件夹
     extraResource: [
       './dist/backend',
     ],
     // 2. 忽略不需要打包的文件 (减小体积)
     ignore: [
-      /^\/services/, // 忽略 Python 源码 (因为已经打包成 exe 了)
-      /^\/README\.md$/, // 忽略 README
-      /^\/public\/MangaReader_Header\.png$/, // 忽略 Banner 图片
+      /^\/services/,
+      /^\/README\.md$/,
+      /^\/public\/MangaReader_Header\.png$/,
       /^\/\.gitignore$/,
       /^\/forge\.config\.js$/,
       /^\/tsconfig\.json$/,
       /^\/nuxt\.config\.ts$/,
-      /^\/models/, // 忽略 models 文件夹 (用户运行时下载)
-      // 注意：不要忽略 .output (这是 Nuxt 构建后的前端)
+      // 优化忽略规则：兼容 Windows 反斜杠，确保 models 文件夹被正确忽略
+      /[\\/]models[\\/]/,
+      /[\\/]models$/,
+      /[\\/]dist[\\/]/,
+      /[\\/]dist$/,
+      /[\\/]out[\\/]/,
+      /[\\/]out$/,
     ]
   },
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {
-        name: 'MangaReader',
-        authors: 'Malloy',
-        description: 'A tool helps manga lover and Japanese learner read manga easily',
-        setupIcon: './public/MangaReaderLogo.ico',
-      },
-    },
-    {
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin', 'win32'], // 显式添加 win32
+      platforms: ['darwin', 'win32'],
     },
   ],
   plugins: [
@@ -43,8 +40,6 @@ module.exports = {
       name: '@electron-forge/plugin-auto-unpack-natives',
       config: {},
     },
-    // Fuses are used to enable/disable various Electron functionality
-    // at package time, before code signing the application
     new FusesPlugin({
       version: FuseVersion.V1,
       [FuseV1Options.RunAsNode]: false,
