@@ -2,7 +2,7 @@
 <script setup lang="ts">
 const config = {
     appName: 'Manga Reader',
-    appVersion: 'v0.1.0',
+    appVersion: 'v1.0.0',
     appDescription: '专为日语学习者打造的离线漫画阅读与翻译工具。',
     projectGithub: 'https://github.com/MalloyManga/MangaReader',
     developerName: 'Malloy',
