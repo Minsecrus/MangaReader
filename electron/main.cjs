@@ -8,6 +8,28 @@ const path = require('path')
 const fs = require('fs')
 const { BackendService } = require('./backend-service.cjs')
 
+// --- Portable Mode Support (便携模式支持) ---
+if (app.isPackaged) {
+    const exeDir = path.dirname(app.getPath('exe'))
+    const portableDataPath = path.join(exeDir, 'data')
+
+    try {
+        // 尝试创建或访问 data 目录
+        if (!fs.existsSync(portableDataPath)) {
+            fs.mkdirSync(portableDataPath)
+        }
+        // 检查写权限
+        fs.accessSync(portableDataPath, fs.constants.W_OK)
+
+        // 设置 userData 路径
+        app.setPath('userData', portableDataPath)
+        console.log('[Portable Mode] Enabled. Data path:', portableDataPath)
+    } catch (e) {
+        console.log('[Portable Mode] Failed (Permission denied?), falling back to default AppData.', e.message)
+    }
+}
+// -------------------------------------------
+
 // 判断是否为开发环境 (由 Electron Forge 自动设置)
 const isDev = !app.isPackaged
 
