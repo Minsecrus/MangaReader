@@ -183,6 +183,10 @@ watch([() => images.value.length, listKey], () => {
 })
 
 const handleScreenshot = () => {
+    if (!window.electronAPI) {
+        console.warn('Screenshot: Electron API not available')
+        return
+    }
     window.electronAPI.send('window:capture-open')
 }
 
