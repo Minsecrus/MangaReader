@@ -190,7 +190,7 @@ onMounted(() => {
         <main class="max-w-screen-2xl mx-auto p-6">
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[calc(100vh-120px)]">
                 <div class="lg:col-span-3 relative">
-                    <ImageUpload />
+                    <FileUpload />
                     <!-- OCR 框选 overlay -->
                     <OcrOverlay v-if="isOcrMode" @capture-complete="handleOcrCapture" @cancel="handleOcrCancel" />
                 </div>

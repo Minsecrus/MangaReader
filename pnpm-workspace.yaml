@@ -1,0 +1,2 @@
+patchedDependencies:
+  nuxt: patches/nuxt.patch
